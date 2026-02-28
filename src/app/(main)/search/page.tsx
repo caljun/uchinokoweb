@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 const CATEGORIES = ['すべて', 'トリミング', 'ホテル', 'トレーニング', 'ペットショップ', '動物病院', 'カフェ']
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams()
   const { user, owner, toggleFavoriteStore } = useAuth()
   const [stores, setStores] = useState<Store[]>([])
@@ -158,5 +158,13 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <SearchContent />
+    </Suspense>
   )
 }
