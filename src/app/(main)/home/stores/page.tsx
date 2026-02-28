@@ -5,32 +5,22 @@ import Link from 'next/link'
 import { collection, query, getDocs, limit, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
-import { Store, StoreProduct } from '@/types/store'
-import { Package, Store as StoreIcon, ArrowRight } from 'lucide-react'
-import { ProductCard, StoreCard } from '@/components/home/HomeCards'
+import { Store } from '@/types/store'
+import { Store as StoreIcon, ArrowLeft } from 'lucide-react'
+import { StoreCard } from '@/components/home/HomeCards'
 
-type ProductWithStore = { product: StoreProduct; store: Store }
-
-export default function HomePage() {
+export default function HomeStoresPage() {
   const { user, owner, toggleFavoriteStore } = useAuth()
   const [stores, setStores] = useState<Store[]>([])
-  const [products, setProducts] = useState<ProductWithStore[]>([])
   const [storeReviews, setStoreReviews] = useState<Record<string, { avgRating: number; reviewCount: number }>>({})
   const [loading, setLoading] = useState(true)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
   useEffect(() => {
-    getDocs(query(collection(db, 'shops'), where('isPublished', '==', true), limit(20)))
+    getDocs(query(collection(db, 'shops'), where('isPublished', '==', true), limit(50)))
       .then(async (snap) => {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Store))
         setStores(data)
-        const flat: ProductWithStore[] = []
-        data.forEach((store) => {
-          store.products?.forEach((p) => {
-            if (p.productId) flat.push({ product: p, store })
-          })
-        })
-        setProducts(flat)
 
         const ids = data.map((s) => s.id).filter(Boolean)
         if (ids.length > 0) {
@@ -77,92 +67,23 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ウェルカムバナー */}
-      <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-6 lg:py-8">
-        <div className="max-w-7xl mx-auto">
-          {user ? (
-            <div>
-              <p className="text-sm text-gray-500">おかえりなさい</p>
-              <h1 className="text-2xl font-bold text-gray-900 mt-0.5">
-                {owner?.name ?? owner?.displayName ?? 'オーナー'}さん
-              </h1>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">わんちゃんと飼い主をつなぐ</h1>
-                <p className="text-gray-500 text-sm mt-1">性格診断・店舗予約・商品購入まで</p>
-              </div>
-              <Link href="/auth">
-                <button className="px-5 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors">
-                  無料で始める
-                </button>
-              </Link>
-            </div>
-          )}
+      <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-4 sticky top-16 z-10">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <Link
+            href="/home"
+            className="p-2 -ml-2 text-gray-500 hover:text-gray-800 transition-colors rounded-full hover:bg-gray-100"
+          >
+            <ArrowLeft size={20} />
+          </Link>
+          <h1 className="text-xl font-bold text-gray-900">お店</h1>
         </div>
       </div>
 
-      <div className="px-6 lg:px-10 py-8">
-        <div className="max-w-7xl mx-auto space-y-12">
-        {/* 商品セクション */}
-        <section>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold text-gray-900">商品</h2>
-            <Link href="/home/products" className="flex items-center gap-1 text-sm text-orange-500 hover:underline font-medium">
-              もっと見る <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square bg-gray-200 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-              <Package size={40} strokeWidth={1.5} />
-              <p className="text-sm">商品がありません</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.slice(0, 8).map(({ product, store }) => (
-                <div key={`${store.id}-${product.productId}`}>
-                  {/* モバイル: 同一タブ遷移 */}
-                  <Link
-                    href={`/search/${store.id}/${product.productId}`}
-                    className="lg:hidden block"
-                  >
-                    <ProductCard product={product} store={store} />
-                  </Link>
-                  {/* デスクトップ: 新しいタブで開く */}
-                  <Link
-                    href={`/search/${store.id}/${product.productId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hidden lg:block"
-                  >
-                    <ProductCard product={product} store={store} />
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* 店舗セクション */}
-        <section>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold text-gray-900">お店</h2>
-            <Link href="/home/stores" className="flex items-center gap-1 text-sm text-orange-500 hover:underline font-medium">
-              もっと見る <ArrowRight size={14} />
-            </Link>
-          </div>
-
+      <div className="px-6 lg:px-10 py-6">
+        <div className="max-w-7xl mx-auto">
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="bg-white rounded-xl overflow-hidden">
                   <div className="aspect-video bg-gray-200 animate-pulse" />
                   <div className="p-3 space-y-2">
@@ -179,12 +100,11 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {stores.slice(0, 8).map((store) => {
+              {stores.map((store) => {
                 const isFav = owner?.favoriteStoreIds?.includes(store.id!) ?? false
                 const review = storeReviews[store.id!]
                 return (
                   <div key={store.id}>
-                    {/* モバイル: 同一タブ遷移 */}
                     <Link href={`/search/${store.id}`} className="lg:hidden block">
                       <StoreCard
                         store={store}
@@ -196,7 +116,6 @@ export default function HomePage() {
                         toggling={togglingId === store.id}
                       />
                     </Link>
-                    {/* デスクトップ: 新しいタブで開く */}
                     <Link
                       href={`/search/${store.id}`}
                       target="_blank"
@@ -218,7 +137,6 @@ export default function HomePage() {
               })}
             </div>
           )}
-        </section>
         </div>
       </div>
     </div>
