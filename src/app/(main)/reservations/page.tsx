@@ -8,8 +8,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Reservation } from '@/types/reservation'
 import { Calendar } from 'lucide-react'
 
-type Filter = 'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'
-
 const STATUS_LABELS: Record<string, string> = {
   pending: '返信待ち',
   confirmed: '確定',
@@ -27,7 +25,6 @@ const STATUS_COLORS: Record<string, string> = {
 export default function ReservationsPage() {
   const { user } = useAuth()
   const [reservations, setReservations] = useState<Reservation[]>([])
-  const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,40 +41,21 @@ export default function ReservationsPage() {
     return unsub
   }, [user])
 
-  const filtered = filter === 'all' ? reservations : reservations.filter((r) => r.status === filter)
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-6 lg:px-10 py-4 sticky top-16 z-10">
-        <h1 className="text-xl font-bold text-gray-900 mb-3">予約</h1>
-        <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
-          {(['all', 'pending', 'confirmed', 'completed', 'cancelled'] as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                filter === f ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {f === 'all' ? 'すべて' : STATUS_LABELS[f]}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="px-6 lg:px-10 py-6 max-w-2xl">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-gray-200 rounded-xl animate-pulse" />)}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : reservations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
             <Calendar size={40} strokeWidth={1.5} />
             <p className="text-sm">予約がありません</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((res) => {
+            {reservations.map((res) => {
               const date = res.createdAt instanceof Date
                 ? res.createdAt
                 : (res.createdAt as { toDate?: () => Date })?.toDate?.() ?? new Date()
