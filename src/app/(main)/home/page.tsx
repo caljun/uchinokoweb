@@ -7,7 +7,7 @@ import { collection, query, getDocs, limit, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Store, StoreProduct } from '@/types/store'
-import { Package, Store as StoreIcon, ArrowRight, Heart } from 'lucide-react'
+import { Package, Store as StoreIcon, ArrowRight, Heart, Star } from 'lucide-react'
 
 type ProductWithStore = { product: StoreProduct; store: Store }
 
@@ -15,22 +15,50 @@ export default function HomePage() {
   const { user, owner, toggleFavoriteStore } = useAuth()
   const [stores, setStores] = useState<Store[]>([])
   const [products, setProducts] = useState<ProductWithStore[]>([])
+  const [storeReviews, setStoreReviews] = useState<Record<string, { avgRating: number; reviewCount: number }>>({})
   const [loading, setLoading] = useState(true)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
   useEffect(() => {
     getDocs(query(collection(db, 'shops'), where('isPublished', '==', true), limit(20)))
-      .then((snap) => {
+      .then(async (snap) => {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Store))
         setStores(data)
         const flat: ProductWithStore[] = []
         data.forEach((store) => {
           store.products?.forEach((p) => {
-            // productId が存在するものだけ表示
             if (p.productId) flat.push({ product: p, store })
           })
         })
         setProducts(flat)
+
+        const ids = data.map((s) => s.id).filter(Boolean)
+        if (ids.length > 0) {
+          const byStore: Record<string, { sum: number; count: number }> = {}
+          ids.forEach((id) => { byStore[id] = { sum: 0, count: 0 } })
+          for (let i = 0; i < ids.length; i += 10) {
+            const chunk = ids.slice(i, i + 10)
+            const reviewsSnap = await getDocs(
+              query(collection(db, 'reviews'), where('storeId', 'in', chunk))
+            )
+            reviewsSnap.docs.forEach((d) => {
+              const sid = (d.data() as { storeId?: string }).storeId
+              const rating = (d.data() as { rating?: number }).rating
+              if (sid && typeof rating === 'number' && byStore[sid]) {
+                byStore[sid].sum += rating
+                byStore[sid].count += 1
+              }
+            })
+          }
+          const next: Record<string, { avgRating: number; reviewCount: number }> = {}
+          Object.entries(byStore).forEach(([id, { sum, count }]) => {
+            next[id] = {
+              avgRating: count > 0 ? sum / count : 0,
+              reviewCount: count,
+            }
+          })
+          setStoreReviews(next)
+        }
         setLoading(false)
       })
   }, [])
@@ -133,7 +161,7 @@ export default function HomePage() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="aspect-square bg-gray-200 rounded-xl animate-pulse" />
               ))}
@@ -144,14 +172,23 @@ export default function HomePage() {
               <p className="text-sm">お店がありません</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {stores.slice(0, 8).map((store) => {
                 const isFav = owner?.favoriteStoreIds?.includes(store.id!) ?? false
+                const review = storeReviews[store.id!]
                 return (
-                  <div key={store.id} className="relative">
+                  <div key={store.id}>
                     {/* モバイル: 同一タブ遷移 */}
                     <Link href={`/search/${store.id}`} className="lg:hidden block">
-                      <StoreCard store={store} />
+                      <StoreCard
+                        store={store}
+                        avgRating={review?.avgRating ?? 0}
+                        reviewCount={review?.reviewCount ?? 0}
+                        isFav={isFav}
+                        showFavorite={!!user}
+                        onFavoriteClick={(e) => handleToggleFavorite(e, store.id!)}
+                        toggling={togglingId === store.id}
+                      />
                     </Link>
                     {/* デスクトップ: 新しいタブで開く */}
                     <Link
@@ -160,22 +197,16 @@ export default function HomePage() {
                       rel="noopener noreferrer"
                       className="hidden lg:block"
                     >
-                      <StoreCard store={store} />
+                      <StoreCard
+                        store={store}
+                        avgRating={review?.avgRating ?? 0}
+                        reviewCount={review?.reviewCount ?? 0}
+                        isFav={isFav}
+                        showFavorite={!!user}
+                        onFavoriteClick={(e) => handleToggleFavorite(e, store.id!)}
+                        toggling={togglingId === store.id}
+                      />
                     </Link>
-
-                    {/* ハートボタン（ログイン時のみ） */}
-                    {user && (
-                      <button
-                        onClick={(e) => handleToggleFavorite(e, store.id!)}
-                        disabled={togglingId === store.id}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center transition-opacity disabled:opacity-60"
-                      >
-                        <Heart
-                          size={16}
-                          className={isFav ? 'fill-pink-500 text-pink-500' : 'text-gray-400'}
-                        />
-                      </button>
-                    )}
                   </div>
                 )
               })}
@@ -214,10 +245,27 @@ function ProductCard({ product, store }: { product: StoreProduct; store: Store }
   )
 }
 
-function StoreCard({ store }: { store: Store }) {
+function StoreCard({
+  store,
+  avgRating,
+  reviewCount,
+  isFav,
+  showFavorite,
+  onFavoriteClick,
+  toggling,
+}: {
+  store: Store
+  avgRating: number
+  reviewCount: number
+  isFav: boolean
+  showFavorite: boolean
+  onFavoriteClick: (e: React.MouseEvent) => void
+  toggling: boolean
+}) {
   return (
     <div className="bg-white rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-      <div className="aspect-square bg-gray-100 relative">
+      {/* 写真 16:9 */}
+      <div className="aspect-video bg-gray-100 relative">
         {store.photoUrls?.[0] ? (
           <Image src={store.photoUrls[0]} alt={store.name} fill className="object-cover" />
         ) : (
@@ -226,11 +274,47 @@ function StoreCard({ store }: { store: Store }) {
           </div>
         )}
       </div>
+      {/* 下: 店舗名＋お気に入り の行、その下に星・評価・件数 */}
       <div className="p-3">
-        <p className="font-medium text-gray-800 text-sm truncate">{store.name}</p>
-        <p className="text-gray-400 text-xs truncate mt-0.5">
-          {store.categories?.[0] ?? store.address ?? ''}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-medium text-gray-800 text-sm truncate min-w-0">{store.name}</p>
+          {showFavorite && (
+            <button
+              type="button"
+              onClick={onFavoriteClick}
+              disabled={toggling}
+              className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center transition-opacity disabled:opacity-60 hover:bg-gray-100"
+            >
+              <Heart
+                size={16}
+                className={isFav ? 'fill-pink-500 text-pink-500' : 'text-gray-400'}
+              />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 mt-1.5 text-sm">
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Star
+                key={s}
+                size={12}
+                className={
+                  reviewCount > 0 && s <= Math.round(avgRating)
+                    ? 'text-yellow-400 fill-yellow-400'
+                    : 'text-gray-200 fill-gray-200'
+                }
+              />
+            ))}
+          </div>
+          {reviewCount > 0 ? (
+            <>
+              <span className="text-gray-700">{avgRating.toFixed(1)}</span>
+              <span className="text-xs text-gray-400">({reviewCount}件)</span>
+            </>
+          ) : (
+            <span className="text-xs text-gray-400">-- (0件)</span>
+          )}
+        </div>
       </div>
     </div>
   )

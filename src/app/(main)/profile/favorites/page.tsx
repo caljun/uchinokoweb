@@ -3,14 +3,16 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Store } from '@/types/store'
-import { Store as StoreIcon, Heart } from 'lucide-react'
+import { Store as StoreIcon, Heart, ArrowLeft } from 'lucide-react'
 
 export default function FavoritesPage() {
   const { user, owner } = useAuth()
+  const router = useRouter()
   const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -48,10 +50,15 @@ export default function FavoritesPage() {
   return (
     <div className="min-h-screen bg-gray-50 px-6 lg:px-10 py-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-          <Heart size={18} className="text-pink-500" />
-          <span>お気に入りのお店</span>
-        </h1>
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-500 hover:text-gray-800 transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Heart size={18} className="text-pink-500" />
+            <span>お気に入りのお店</span>
+          </h1>
+        </div>
 
         {loading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -449,7 +449,7 @@ function SummaryTile({ label, icon, value }: { label: string; icon: string; valu
 // ===== モーダルコンポーネント =====
 function ModalShell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-end px-4 pt-3">
           <button

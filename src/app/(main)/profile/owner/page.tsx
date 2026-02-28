@@ -1,10 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function OwnerProfilePage() {
   const { user, owner } = useAuth()
+  const router = useRouter()
 
   if (!user || !owner) {
     return (
@@ -35,7 +38,12 @@ export default function OwnerProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 px-6 lg:px-10 py-6">
       <div className="max-w-xl mx-auto space-y-6">
-        <h1 className="text-lg font-bold text-gray-900">飼い主プロフィール</h1>
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-500 hover:text-gray-800 transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-lg font-bold text-gray-900">飼い主プロフィール</h1>
+        </div>
 
         <div className="bg-white rounded-xl p-5 space-y-3">
           <FieldRow label="名前" value={displayName} />

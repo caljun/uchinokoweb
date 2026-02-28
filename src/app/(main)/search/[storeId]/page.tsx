@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
@@ -9,13 +9,14 @@ import { db } from '@/lib/firebase'
 import { Store, StoreProduct } from '@/types/store'
 import {
   MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight,
-  Package, Store as StoreIcon, Star,
+  Package, Store as StoreIcon, Star, ArrowLeft,
 } from 'lucide-react'
 
 type Tab = 'info' | 'products' | 'dogs'
 
 export default function StoreDetailPage() {
   const { storeId } = useParams<{ storeId: string }>()
+  const router = useRouter()
   const [store, setStore] = useState<Store | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('info')
@@ -76,7 +77,13 @@ export default function StoreDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 写真ギャラリー */}
-      <div className="relative bg-gray-200 aspect-video lg:aspect-[21/9] overflow-hidden">
+      <div className="relative bg-gray-200 aspect-video lg:aspect-[21/9] overflow-hidden lg:max-w-3xl lg:mx-auto">
+        <button
+          onClick={() => router.back()}
+          className="absolute top-3 left-3 z-10 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 transition-colors"
+        >
+          <ArrowLeft size={20} />
+        </button>
         {photos.length > 0 ? (
           <>
             <Image src={photos[photoIndex]} alt={store.name} fill className="object-cover" />
@@ -114,7 +121,7 @@ export default function StoreDetailPage() {
       </div>
 
       {/* 店舗名・レビュー・住所 */}
-      <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-5 space-y-2 text-center">
+      <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-5 space-y-2 text-center lg:max-w-3xl lg:mx-auto">
         <h1 className="text-2xl font-bold text-gray-900">{store.name}</h1>
         <div className="flex items-center justify-center gap-1.5 text-sm">
           <div className="flex items-center gap-0.5">
@@ -148,8 +155,8 @@ export default function StoreDetailPage() {
       </div>
 
       {/* タブナビ */}
-      <div className="bg-white border-b border-gray-200 px-6 lg:px-10 sticky top-16 z-10">
-        <div className="flex justify-center gap-6">
+      <div className="bg-white border-b border-gray-200 px-6 lg:px-10 sticky top-16 z-10 lg:max-w-3xl lg:mx-auto">
+        <div className="flex justify-center gap-12">
           {tabs.map(({ key, label }) => (
             <button
               key={key}

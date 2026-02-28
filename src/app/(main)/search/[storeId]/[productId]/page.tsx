@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Store, StoreProduct } from '@/types/store'
 import {
-  ChevronLeft, ChevronRight, Package, Star, ShoppingCart,
+  ChevronLeft, ChevronRight, Package, Star, ShoppingCart, ArrowLeft,
 } from 'lucide-react'
 
 interface ProductReview {
@@ -26,6 +26,7 @@ type ProductTab = 'related' | 'dogs'
 
 export default function ProductDetailPage() {
   const { storeId, productId } = useParams<{ storeId: string; productId: string }>()
+  const router = useRouter()
   const [store, setStore] = useState<Store | null>(null)
   const [product, setProduct] = useState<StoreProduct | null>(null)
   const [reviews, setReviews] = useState<ProductReview[]>([])
@@ -85,13 +86,23 @@ export default function ProductDetailPage() {
     ?.filter((p) => p.productId !== productId && p.isActive !== false && !p.soldOut)
     .slice(0, 4) ?? []
 
+  const tabs: { key: ProductTab; label: string }[] = [
+    { key: 'related', label: '関連商品' },
+    { key: 'dogs', label: '購入した子' },
+  ]
+
   return (
     <div className="min-h-screen bg-gray-50 pb-24 lg:pb-8">
       <div className="max-w-3xl mx-auto px-6 py-6 space-y-8">
-        {/* 1. 店舗名 */}
-        <Link href={`/search/${storeId}`} className="inline-flex items-center gap-1 text-sm text-orange-500 hover:underline font-medium">
-          <span>{store.name}</span>
-        </Link>
+        {/* 1. 戻る + 店舗名 */}
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-500 hover:text-gray-800 transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+          <Link href={`/search/${storeId}`} className="inline-flex items-center gap-1 text-sm text-orange-500 hover:underline font-medium">
+            <span>{store.name}</span>
+          </Link>
+        </div>
 
         {/* 2. 写真スライド（ECっぽい正方形カード） */}
         <div className="relative bg-gray-100 rounded-2xl overflow-hidden max-w-md mx-auto aspect-square">
@@ -177,25 +188,24 @@ export default function ProductDetailPage() {
           </section>
         )}
 
-        {/* 5. タブ（関連商品 / 購入した子） */}
+        {/* 5. タブ（関連商品 / 購入した子）— 店舗詳細と同じ下線スタイル */}
         <section className="space-y-4">
-          <div className="bg-white rounded-full p-1 flex justify-center gap-1">
-            <button
-              onClick={() => setActiveTab('related')}
-              className={`flex-1 py-2 text-sm font-medium rounded-full ${
-                activeTab === 'related' ? 'bg-orange-500 text-white' : 'text-gray-500'
-              }`}
-            >
-              関連商品
-            </button>
-            <button
-              onClick={() => setActiveTab('dogs')}
-              className={`flex-1 py-2 text-sm font-medium rounded-full ${
-                activeTab === 'dogs' ? 'bg-orange-500 text-white' : 'text-gray-500'
-              }`}
-            >
-              購入した子
-            </button>
+          <div className="bg-white border-b border-gray-200 -mx-6 px-6">
+            <div className="flex justify-center gap-12">
+              {tabs.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === key
+                      ? 'border-orange-500 text-orange-500'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* タブコンテンツ */}
