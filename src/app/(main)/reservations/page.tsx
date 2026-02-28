@@ -28,7 +28,10 @@ export default function ReservationsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
     const q = query(
       collection(db, 'reservations'),
       where('userId', '==', user.uid),
@@ -40,6 +43,24 @@ export default function ReservationsPage() {
     })
     return unsub
   }, [user])
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center justify-center py-20 px-5 gap-5">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+            <Calendar size={40} className="text-gray-300" strokeWidth={1.5} />
+          </div>
+          <p className="text-gray-500 text-center text-sm">ログインすると予約履歴の確認や新規予約ができます</p>
+          <Link href="/auth" className="w-full max-w-xs">
+            <button className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors text-sm">
+              ログイン / 新規登録
+            </button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

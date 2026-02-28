@@ -22,23 +22,27 @@ export default function HomeStoresPage() {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Store))
         setStores(data)
 
-        const ids = data.map((s) => s.id).filter(Boolean)
-        if (ids.length > 0) {
+        if (user && data.length > 0) {
+          const ids = data.map((s) => s.id).filter(Boolean)
           const byStore: Record<string, { sum: number; count: number }> = {}
           ids.forEach((id) => { byStore[id] = { sum: 0, count: 0 } })
           for (let i = 0; i < ids.length; i += 10) {
             const chunk = ids.slice(i, i + 10)
-            const reviewsSnap = await getDocs(
-              query(collection(db, 'reviews'), where('storeId', 'in', chunk))
-            )
-            reviewsSnap.docs.forEach((d) => {
-              const sid = (d.data() as { storeId?: string }).storeId
-              const rating = (d.data() as { rating?: number }).rating
-              if (sid && typeof rating === 'number' && byStore[sid]) {
-                byStore[sid].sum += rating
-                byStore[sid].count += 1
-              }
-            })
+            try {
+              const reviewsSnap = await getDocs(
+                query(collection(db, 'reviews'), where('storeId', 'in', chunk))
+              )
+              reviewsSnap.docs.forEach((d) => {
+                const sid = (d.data() as { storeId?: string }).storeId
+                const rating = (d.data() as { rating?: number }).rating
+                if (sid && typeof rating === 'number' && byStore[sid]) {
+                  byStore[sid].sum += rating
+                  byStore[sid].count += 1
+                }
+              })
+            } catch {
+              // 未ログイン時など権限エラーはスキップ
+            }
           }
           const next: Record<string, { avgRating: number; reviewCount: number }> = {}
           Object.entries(byStore).forEach(([id, { sum, count }]) => {
@@ -51,7 +55,8 @@ export default function HomeStoresPage() {
         }
         setLoading(false)
       })
-  }, [])
+      .catch(() => setLoading(false))
+  }, [user])
 
   const handleToggleFavorite = async (e: React.MouseEvent, storeId: string) => {
     e.preventDefault()

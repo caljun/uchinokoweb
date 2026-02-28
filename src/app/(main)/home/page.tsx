@@ -19,9 +19,10 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
+  // 店舗・商品は未ログインでも取得（shops は read: if true）
   useEffect(() => {
     getDocs(query(collection(db, 'shops'), where('isPublished', '==', true), limit(20)))
-      .then(async (snap) => {
+      .then((snap) => {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Store))
         setStores(data)
         const flat: ProductWithStore[] = []
@@ -31,37 +32,53 @@ export default function HomePage() {
           })
         })
         setProducts(flat)
-
-        const ids = data.map((s) => s.id).filter(Boolean)
-        if (ids.length > 0) {
-          const byStore: Record<string, { sum: number; count: number }> = {}
-          ids.forEach((id) => { byStore[id] = { sum: 0, count: 0 } })
-          for (let i = 0; i < ids.length; i += 10) {
-            const chunk = ids.slice(i, i + 10)
-            const reviewsSnap = await getDocs(
-              query(collection(db, 'reviews'), where('storeId', 'in', chunk))
-            )
-            reviewsSnap.docs.forEach((d) => {
-              const sid = (d.data() as { storeId?: string }).storeId
-              const rating = (d.data() as { rating?: number }).rating
-              if (sid && typeof rating === 'number' && byStore[sid]) {
-                byStore[sid].sum += rating
-                byStore[sid].count += 1
-              }
-            })
-          }
-          const next: Record<string, { avgRating: number; reviewCount: number }> = {}
-          Object.entries(byStore).forEach(([id, { sum, count }]) => {
-            next[id] = {
-              avgRating: count > 0 ? sum / count : 0,
-              reviewCount: count,
-            }
-          })
-          setStoreReviews(next)
-        }
         setLoading(false)
       })
+      .catch(() => setLoading(false))
   }, [])
+
+  // レビューはログイン時のみ取得（reviews は request.auth != null 必須）
+  useEffect(() => {
+    if (!user || stores.length === 0) return
+    const ids = stores.map((s) => s.id).filter(Boolean)
+    const byStore: Record<string, { sum: number; count: number }> = {}
+    ids.forEach((id) => { byStore[id] = { sum: 0, count: 0 } })
+    let cancelled = false
+    const run = async () => {
+      for (let i = 0; i < ids.length; i += 10) {
+        if (cancelled) return
+        const chunk = ids.slice(i, i + 10)
+        try {
+          const reviewsSnap = await getDocs(
+            query(collection(db, 'reviews'), where('storeId', 'in', chunk))
+          )
+          if (cancelled) return
+          reviewsSnap.docs.forEach((d) => {
+            const sid = (d.data() as { storeId?: string }).storeId
+            const rating = (d.data() as { rating?: number }).rating
+            if (sid && typeof rating === 'number' && byStore[sid]) {
+              byStore[sid].sum += rating
+              byStore[sid].count += 1
+            }
+          })
+        } catch {
+          // 権限エラー時はスキップ
+        }
+      }
+      if (!cancelled) {
+        const next: Record<string, { avgRating: number; reviewCount: number }> = {}
+        Object.entries(byStore).forEach(([id, { sum, count }]) => {
+          next[id] = {
+            avgRating: count > 0 ? sum / count : 0,
+            reviewCount: count,
+          }
+        })
+        setStoreReviews(next)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [user, stores.length])
 
   const handleToggleFavorite = async (e: React.MouseEvent, storeId: string) => {
     e.preventDefault()
@@ -77,24 +94,24 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ウェルカムバナー */}
-      <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-6 lg:py-8">
+      {/* ウェルカムバナー（モバイルは控えめに） */}
+      <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-4 lg:py-8">
         <div className="max-w-7xl mx-auto">
           {user ? (
             <div>
-              <p className="text-sm text-gray-500">おかえりなさい</p>
-              <h1 className="text-2xl font-bold text-gray-900 mt-0.5">
+              <p className="text-xs lg:text-sm text-gray-500">おかえりなさい</p>
+              <h1 className="text-lg lg:text-2xl font-bold text-gray-900 mt-0.5">
                 {owner?.name ?? owner?.displayName ?? 'オーナー'}さん
               </h1>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">わんちゃんと飼い主をつなぐ</h1>
-                <p className="text-gray-500 text-sm mt-1">性格診断・店舗予約・商品購入まで</p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-base lg:text-2xl font-bold text-gray-900 leading-tight">愛犬の全てが揃う場所</h1>
+                <p className="text-gray-500 text-xs lg:text-sm mt-0.5 lg:mt-1">性格診断・店舗予約・商品購入まで</p>
               </div>
-              <Link href="/auth">
-                <button className="px-5 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors">
+              <Link href="/auth" className="shrink-0">
+                <button className="px-4 py-2 lg:px-5 lg:py-2.5 bg-orange-500 text-white text-xs lg:text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors">
                   無料で始める
                 </button>
               </Link>
