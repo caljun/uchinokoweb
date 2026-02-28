@@ -25,6 +25,22 @@ export default function UchinokoPage() {
 
   const AGE_LABELS = ['パピー期', '成犬期', 'シニア期']
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center justify-center py-20 px-5 gap-5">
+          <PawPrint size={48} strokeWidth={1.5} className="text-gray-300" />
+          <p className="text-gray-500 text-center">ログインするとうちの子を登録できます</p>
+          <Link href="/auth" className="w-full max-w-xs">
+            <button className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold">
+              ログイン / 新規登録
+            </button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="px-6 lg:px-10 py-6">
