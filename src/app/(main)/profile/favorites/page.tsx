@@ -7,11 +7,13 @@ import { useRouter } from 'next/navigation'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Store } from '@/types/store'
 import { Store as StoreIcon, Heart, ArrowLeft } from 'lucide-react'
 
 export default function FavoritesPage() {
   const { user, owner } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const router = useRouter()
   const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,12 +39,13 @@ export default function FavoritesPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
         <p className="text-sm text-gray-500 mb-4">ログインするとお気に入りのお店を確認できます。</p>
-        <Link
-          href="/auth"
+        <button
+          type="button"
+          onClick={openAuthModal}
           className="px-5 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors"
         >
           ログイン / 新規登録
-        </Link>
+        </button>
       </div>
     )
   }

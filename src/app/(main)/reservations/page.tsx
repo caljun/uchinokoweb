@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Reservation } from '@/types/reservation'
 import { Calendar } from 'lucide-react'
 
@@ -24,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function ReservationsPage() {
   const { user } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -52,11 +54,13 @@ export default function ReservationsPage() {
             <Calendar size={40} className="text-gray-300" strokeWidth={1.5} />
           </div>
           <p className="text-gray-500 text-center text-sm">ログインすると予約履歴の確認や新規予約ができます</p>
-          <Link href="/auth" className="w-full max-w-xs">
-            <button className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors text-sm">
-              ログイン / 新規登録
-            </button>
-          </Link>
+          <button
+            type="button"
+            onClick={openAuthModal}
+            className="w-full max-w-xs py-3 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-colors"
+          >
+            ログイン / 新規登録
+          </button>
         </div>
       </div>
     )

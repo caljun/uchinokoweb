@@ -8,11 +8,13 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Store, StoreProduct } from '@/types/store'
 import { Package, Store as StoreIcon, ArrowRight } from 'lucide-react'
 import { ProductCard, StoreCard } from '@/components/home/HomeCards'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 
 type ProductWithStore = { product: StoreProduct; store: Store }
 
 export default function HomePage() {
   const { user, owner, toggleFavoriteStore } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const [stores, setStores] = useState<Store[]>([])
   const [products, setProducts] = useState<ProductWithStore[]>([])
   const [storeReviews, setStoreReviews] = useState<Record<string, { avgRating: number; reviewCount: number }>>({})
@@ -110,11 +112,13 @@ export default function HomePage() {
                 <h1 className="text-base lg:text-2xl font-bold text-gray-900 leading-tight">愛犬の全てが揃う場所</h1>
                 <p className="text-gray-500 text-xs lg:text-sm mt-0.5 lg:mt-1">性格診断・店舗予約・商品購入まで</p>
               </div>
-              <Link href="/auth" className="shrink-0">
-                <button className="px-4 py-2 lg:px-5 lg:py-2.5 bg-orange-500 text-white text-xs lg:text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors">
-                  無料で始める
-                </button>
-              </Link>
+              <button
+                type="button"
+                onClick={openAuthModal}
+                className="shrink-0 px-4 py-2 lg:px-5 lg:py-2.5 bg-orange-500 text-white text-xs lg:text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors"
+              >
+                無料で始める
+              </button>
             </div>
           )}
         </div>

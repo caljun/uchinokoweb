@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 import { PawPrint, Calendar, Package, Heart, ChevronRight } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, owner, signOut } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const router = useRouter()
 
   const handleSignOut = async () => {
@@ -22,11 +24,13 @@ export default function ProfilePage() {
             <span className="text-3xl text-gray-300">👤</span>
           </div>
           <p className="text-gray-500 text-center text-sm">ログインするとうちの子の登録や予約ができます</p>
-          <Link href="/auth" className="w-full max-w-xs">
-            <button className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors text-sm">
-              ログイン / 新規登録
-            </button>
-          </Link>
+          <button
+            type="button"
+            onClick={openAuthModal}
+            className="w-full max-w-xs py-3 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-colors"
+          >
+            ログイン / 新規登録
+          </button>
         </div>
       </div>
     )

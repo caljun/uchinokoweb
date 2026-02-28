@@ -4,21 +4,24 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 
 export default function OwnerProfilePage() {
   const { user, owner } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const router = useRouter()
 
   if (!user || !owner) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
         <p className="text-sm text-gray-500 mb-4">ログインすると飼い主プロフィールを確認できます。</p>
-        <Link
-          href="/auth"
+        <button
+          type="button"
+          onClick={openAuthModal}
           className="px-5 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors"
         >
           ログイン / 新規登録
-        </Link>
+        </button>
       </div>
     )
   }

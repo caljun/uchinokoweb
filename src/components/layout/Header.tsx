@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ShoppingCart, LogIn, PawPrint, Search, Calendar, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 
 export default function Header() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOut } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const [query, setQuery] = useState('')
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -92,13 +94,14 @@ export default function Header() {
               </button>
             </>
           ) : (
-            <Link
-              href="/auth"
+            <button
+              type="button"
+              onClick={openAuthModal}
               className="flex items-center gap-1 px-3 py-1.5 bg-orange-500 text-white text-sm font-bold rounded-lg hover:bg-orange-600 transition-colors"
             >
               <LogIn size={14} />
               ログイン
-            </Link>
+            </button>
           )}
         </div>
 

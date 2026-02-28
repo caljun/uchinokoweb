@@ -6,11 +6,13 @@ import Image from 'next/image'
 import { collection, query, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dog } from '@/types/dog'
 import { Plus, PawPrint, ChevronRight } from 'lucide-react'
 
 export default function UchinokoPage() {
   const { user } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const [dogs, setDogs] = useState<Dog[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -29,13 +31,17 @@ export default function UchinokoPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="flex flex-col items-center justify-center py-20 px-5 gap-5">
-          <PawPrint size={48} strokeWidth={1.5} className="text-gray-300" />
-          <p className="text-gray-500 text-center">ログインするとうちの子を登録できます</p>
-          <Link href="/auth" className="w-full max-w-xs">
-            <button className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold">
-              ログイン / 新規登録
-            </button>
-          </Link>
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+            <PawPrint size={40} strokeWidth={1.5} className="text-gray-300" />
+          </div>
+          <p className="text-gray-500 text-center text-sm">ログインするとうちの子を登録できます</p>
+          <button
+            type="button"
+            onClick={openAuthModal}
+            className="w-full max-w-xs py-3 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-colors"
+          >
+            ログイン / 新規登録
+          </button>
         </div>
       </div>
     )
