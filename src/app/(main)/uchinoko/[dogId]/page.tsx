@@ -9,7 +9,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Dog, Diary, HealthRecord } from '@/types/dog'
-import { Pencil } from 'lucide-react'
+import { Pencil, Share2 } from 'lucide-react'
+import { ShareCardsModal } from '@/components/share/ShareCardsModal'
 
 type Tab = 'info' | 'diary' | 'health'
 
@@ -73,6 +74,7 @@ export default function UchinokoDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showDiaryModal, setShowDiaryModal] = useState(false)
   const [showHealthModal, setShowHealthModal] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   useEffect(() => {
     if (!user || !dogId) return
@@ -119,8 +121,15 @@ export default function UchinokoDetailPage() {
           {/* 詳細タブ */}
           {tab === 'info' && (
             <div className="space-y-4">
-              {/* 編集ボタン */}
-              <div className="flex justify-end">
+              {/* 編集 / シェアボタン */}
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  <Share2 size={14} />
+                  シェア
+                </button>
                 <Link
                   href={`/uchinoko/${dogId}/edit`}
                   className="flex items-center gap-1.5 px-4 py-2 bg-orange-50 text-orange-500 border border-orange-200 rounded-xl text-sm font-medium hover:bg-orange-100 transition-colors"
@@ -327,6 +336,11 @@ export default function UchinokoDetailPage() {
             onClose={() => setShowDiaryModal(false)}
             onCreated={(diary) => setDiaries((prev) => [diary, ...prev])}
           />
+        )}
+
+        {/* シェアカードモーダル */}
+        {showShareModal && (
+          <ShareCardsModal dog={dog} onClose={() => setShowShareModal(false)} />
         )}
 
         {/* 健康記録追加モーダル */}
