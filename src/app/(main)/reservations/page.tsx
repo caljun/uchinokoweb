@@ -43,7 +43,7 @@ export default function ReservationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="px-6 lg:px-10 py-6 max-w-2xl">
+      <div className="px-6 lg:px-10 py-6 max-w-2xl mx-auto">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-gray-200 rounded-xl animate-pulse" />)}

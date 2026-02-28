@@ -13,6 +13,7 @@ import {
   calculateDifficultyRank,
   getDifficultyDescription,
   getTemperamentDescription,
+  getBreedDescription,
   ALL_BREEDS,
   X_OPTIONS,
   Y_OPTIONS,
@@ -422,54 +423,55 @@ export default function UchinokoNewPage() {
 
           {/* Step 2: 診断結果 */}
           {step === 2 && (
-            <div className="space-y-5">
-              <h2 className="text-lg font-bold text-gray-800">診断結果</h2>
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900">診断結果</h2>
 
-              {/* 性格タイプ */}
-              <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-                <p className="text-xs font-semibold text-orange-400 uppercase tracking-wider mb-1">性格タイプ</p>
-                <p className="text-2xl font-bold text-orange-600 mb-2">{temperamentType}</p>
-                <p className="text-sm text-gray-600 leading-relaxed">
+              <div className="space-y-3">
+                <p className="text-base font-semibold text-gray-900">タイプ</p>
+                <p className="text-sm text-gray-500">{temperamentType}</p>
+                <p className="text-sm text-gray-500 leading-relaxed mt-1 whitespace-pre-line">
                   {getTemperamentDescription(temperamentType)}
                 </p>
               </div>
 
-              {/* しつけ難易度 */}
-              <div className={`rounded-2xl p-5 border ${
-                difficultyRank === 'A' ? 'bg-green-50 border-green-100' :
-                difficultyRank === 'B' ? 'bg-blue-50 border-blue-100' :
-                'bg-yellow-50 border-yellow-100'
-              }`}>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">しつけ難易度</p>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className={`text-3xl font-bold ${
-                    difficultyRank === 'A' ? 'text-green-600' :
-                    difficultyRank === 'B' ? 'text-blue-600' : 'text-yellow-600'
-                  }`}>
-                    ランク {difficultyRank}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 leading-relaxed">{difficultyDescription}</p>
-              </div>
+              <hr className="border-gray-200" />
 
-              {/* 登録情報サマリ */}
-              <div className="bg-white rounded-2xl p-4 border border-gray-100 space-y-2">
-                <p className="text-sm font-bold text-gray-700">登録内容</p>
-                <Row label="名前" value={form.name} />
-                <Row label="犬種" value={form.breed} />
-                <Row label="性別" value={form.gender === 'male' ? 'オス' : 'メス'} />
-                <Row label="体重" value={`${form.weight}kg`} />
+              <div className="space-y-3">
+                <p className="text-base font-semibold text-gray-900">詳細説明</p>
+                {(() => {
+                  const breed = getBreedDescription(form.breed)
+                  if (breed.purpose) return (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-gray-700">【{form.breed}の特徴】</p>
+                      {breed.origin && <p className="text-sm text-gray-500">原産国: {breed.origin}</p>}
+                      <p className="text-sm text-gray-500">目的: {breed.purpose}</p>
+                      {breed.pros && <p className="text-sm text-gray-500">長所: {breed.pros}</p>}
+                      {breed.cons && <p className="text-sm text-gray-500">短所: {breed.cons}</p>}
+                      {breed.chip && <p className="text-sm text-gray-500 leading-relaxed">{breed.chip}</p>}
+                    </div>
+                  )
+                  return null
+                })()}
+                <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-line">{difficultyDescription}</p>
               </div>
 
               {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-base hover:bg-orange-600 transition-colors disabled:opacity-50"
-              >
-                {saving ? '保存中...' : '登録する 🐾'}
-              </button>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setStep(1)}
+                  className="flex-1 py-4 bg-gray-100 text-gray-800 rounded-2xl font-semibold text-base"
+                >
+                  戻る
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-semibold text-base hover:bg-orange-600 transition-colors disabled:opacity-50"
+                >
+                  {saving ? '保存中...' : '登録する'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -513,11 +515,3 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-gray-800 font-medium">{value}</span>
-    </div>
-  )
-}

@@ -51,29 +51,32 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50">
       {/* ウェルカムバナー */}
       <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-6 lg:py-8">
-        {user ? (
-          <div>
-            <p className="text-sm text-gray-500">おかえりなさい</p>
-            <h1 className="text-2xl font-bold text-gray-900 mt-0.5">
-              {owner?.name ?? owner?.displayName ?? 'オーナー'}さん
-            </h1>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto">
+          {user ? (
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">わんちゃんと飼い主をつなぐ</h1>
-              <p className="text-gray-500 text-sm mt-1">性格診断・店舗予約・商品購入まで</p>
+              <p className="text-sm text-gray-500">おかえりなさい</p>
+              <h1 className="text-2xl font-bold text-gray-900 mt-0.5">
+                {owner?.name ?? owner?.displayName ?? 'オーナー'}さん
+              </h1>
             </div>
-            <Link href="/auth">
-              <button className="px-5 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors">
-                無料で始める
-              </button>
-            </Link>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">わんちゃんと飼い主をつなぐ</h1>
+                <p className="text-gray-500 text-sm mt-1">性格診断・店舗予約・商品購入まで</p>
+              </div>
+              <Link href="/auth">
+                <button className="px-5 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors">
+                  無料で始める
+                </button>
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="px-6 lg:px-10 py-8 space-y-12">
+      <div className="px-6 lg:px-10 py-8">
+        <div className="max-w-7xl mx-auto space-y-12">
         {/* 商品セクション */}
         <section>
           <div className="flex items-center justify-between mb-5">
@@ -95,7 +98,7 @@ export default function HomePage() {
               <p className="text-sm">商品がありません</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {products.slice(0, 8).map(({ product, store }) => (
                 <div key={`${store.id}-${product.productId}`}>
                   {/* モバイル: 同一タブ遷移 */}
@@ -141,7 +144,7 @@ export default function HomePage() {
               <p className="text-sm">お店がありません</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {stores.slice(0, 8).map((store) => {
                 const isFav = owner?.favoriteStoreIds?.includes(store.id!) ?? false
                 return (
@@ -179,6 +182,7 @@ export default function HomePage() {
             </div>
           )}
         </section>
+        </div>
       </div>
     </div>
   )

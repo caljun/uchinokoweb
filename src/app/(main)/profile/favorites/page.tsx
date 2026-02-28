@@ -47,14 +47,14 @@ export default function FavoritesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 px-6 lg:px-10 py-6">
-      <div className="max-w-xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
           <Heart size={18} className="text-pink-500" />
           <span>お気に入りのお店</span>
         </h1>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="aspect-square bg-gray-200 rounded-xl animate-pulse" />
             ))}
@@ -65,7 +65,7 @@ export default function FavoritesPage() {
             <p className="text-sm">まだお気に入り登録されたお店がありません</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {stores.map((store) => (
               <Link key={store.id} href={`/search/${store.id}`}>
                 <div className="bg-white rounded-xl overflow-hidden hover:shadow-md transition-shadow">

@@ -44,6 +44,7 @@ export default function UchinokoPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="px-6 lg:px-10 py-6">
+        <div className="max-w-5xl mx-auto">
         <div className="flex justify-end mb-4">
           <Link href="/uchinoko/new">
             <button className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors">
@@ -96,6 +97,7 @@ export default function UchinokoPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   )

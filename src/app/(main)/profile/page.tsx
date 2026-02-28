@@ -34,39 +34,49 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 px-6 lg:px-10 py-6">
-      <div className="max-w-xl mx-auto space-y-8">
-        {/* プロフィールセクション */}
-        <section className="space-y-3">
-          <h1 className="text-lg font-bold text-gray-900">プロフィール</h1>
+      <div className="max-w-4xl mx-auto">
+        <div className="lg:grid lg:grid-cols-3 lg:gap-8 space-y-6 lg:space-y-0">
 
-          {/* 飼い主プロフィールカード */}
-          <div className="bg-white rounded-xl p-4 flex items-center gap-4">
-            <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center text-xl font-bold text-orange-500">
-              {owner?.displayName?.[0] ?? 'U'}
+          {/* 左: プロフィールカード */}
+          <div className="lg:col-span-1 space-y-4">
+            <h1 className="text-lg font-bold text-gray-900">プロフィール</h1>
+            <div className="bg-white rounded-xl p-6 flex flex-col items-center text-center gap-3">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-2xl font-bold text-orange-500">
+                {owner?.displayName?.[0] ?? 'U'}
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-base">{owner?.displayName ?? 'オーナー'}</p>
+                <p className="text-gray-400 text-sm mt-0.5">{owner?.email}</p>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="w-full mt-2 py-2 text-sm text-gray-400 hover:text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                ログアウト
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="font-bold text-gray-900 text-base">{owner?.displayName ?? 'オーナー'}</p>
-              <p className="text-gray-400 text-sm">{owner?.email}</p>
-            </div>
           </div>
 
-          {/* メニュー: 飼い主プロフィール / お気に入り */}
-          <div className="bg-white rounded-xl overflow-hidden">
-            <MenuItem label="飼い主プロフィール" Icon={PawPrint} href="/profile/owner" />
-          </div>
-          <div className="bg-white rounded-xl overflow-hidden">
-            <MenuItem label="お気に入り" Icon={Heart} href="/profile/favorites" />
-          </div>
-        </section>
+          {/* 右: メニュー */}
+          <div className="lg:col-span-2 space-y-6">
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">アカウント</h2>
+              <div className="bg-white rounded-xl overflow-hidden">
+                <MenuItem label="飼い主プロフィール" Icon={PawPrint} href="/profile/owner" />
+                <MenuItem label="お気に入り" Icon={Heart} href="/profile/favorites" />
+              </div>
+            </section>
 
-        {/* 注文履歴セクション */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-bold text-gray-900">注文履歴</h2>
-          <div className="bg-white rounded-xl overflow-hidden">
-            <MenuItem label="予約履歴" Icon={Calendar} href="/reservations" />
-            <MenuItem label="注文履歴" Icon={Package} href="/orders" />
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">履歴</h2>
+              <div className="bg-white rounded-xl overflow-hidden">
+                <MenuItem label="予約履歴" Icon={Calendar} href="/reservations" />
+                <MenuItem label="注文履歴" Icon={Package} href="/orders" />
+              </div>
+            </section>
           </div>
-        </section>
+
+        </div>
       </div>
     </div>
   )
