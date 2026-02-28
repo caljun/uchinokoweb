@@ -1,0 +1,523 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { db, storage } from '@/lib/firebase'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  calculateAgeGroup,
+  getBreedSize,
+  calculateTemperamentType,
+  calculateDifficultyRank,
+  getDifficultyDescription,
+  getTemperamentDescription,
+  ALL_BREEDS,
+  X_OPTIONS,
+  Y_OPTIONS,
+  WALK_FREQUENCY_OPTIONS,
+} from '@/lib/diagnosis'
+
+type Step = 0 | 1 | 2
+
+interface FormData {
+  // Step1: 基本情報
+  name: string
+  birthDate: string
+  weight: string
+  gender: string        // "male" | "female"
+  neutered: boolean
+  breed: string
+  photo: File | null
+  photoPreview: string | null
+
+  // Step2: 性格診断
+  x: number             // -1 | 0 | 1
+  y: number             // -1 | 0 | 1
+  multiDog: boolean
+  toyLover: boolean
+  sleepTogether: boolean
+  restrictedRoom: boolean
+  leadType: string      // "lead" | "harness"
+  walkFrequency: string
+  activeSeason: string  // "" | "summer" | "winter"
+  hospitalHistory: boolean
+  allergy: boolean
+}
+
+const initialForm: FormData = {
+  name: '',
+  birthDate: '',
+  weight: '',
+  gender: 'male',
+  neutered: false,
+  breed: 'わからない',
+  photo: null,
+  photoPreview: null,
+  x: 0,
+  y: 0,
+  multiDog: false,
+  toyLover: true,
+  sleepTogether: false,
+  restrictedRoom: false,
+  leadType: 'lead',
+  walkFrequency: '毎日1回',
+  activeSeason: '',
+  hospitalHistory: false,
+  allergy: false,
+}
+
+export default function UchinokoNewPage() {
+  const [step, setStep] = useState<Step>(0)
+  const [form, setForm] = useState<FormData>(initialForm)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { user } = useAuth()
+  const router = useRouter()
+
+  const set = (key: keyof FormData, value: unknown) =>
+    setForm((prev) => ({ ...prev, [key]: value }))
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    set('photo', file)
+    set('photoPreview', URL.createObjectURL(file))
+  }
+
+  const breedSize = getBreedSize(form.breed)
+  const ageGroup = form.birthDate ? calculateAgeGroup(new Date(form.birthDate), breedSize) : 1
+  const temperamentType = calculateTemperamentType(form.x, form.y)
+  const difficultyRank = calculateDifficultyRank({
+    multiDog: form.multiDog,
+    toyLover: form.toyLover,
+    sleepTogether: form.sleepTogether,
+    restrictedRoom: form.restrictedRoom,
+    leadType: form.leadType,
+  })
+  const difficultyDescription = getDifficultyDescription(difficultyRank, ageGroup, breedSize)
+
+  const handleSave = async () => {
+    if (!user) return
+    setSaving(true)
+    setError('')
+    try {
+      const docRef = await addDoc(collection(db, 'owners', user.uid, 'dogs'), {
+        name: form.name,
+        birthDate: new Date(form.birthDate),
+        ageGroup,
+        weight: parseFloat(form.weight) || 0,
+        gender: form.gender,
+        neutered: form.neutered,
+        breed: form.breed,
+        breedSize,
+        x: form.x,
+        y: form.y,
+        multiDog: form.multiDog,
+        toyLover: form.toyLover,
+        sleepTogether: form.sleepTogether,
+        restrictedRoom: form.restrictedRoom,
+        leadType: form.leadType,
+        walkFrequency: form.walkFrequency || null,
+        activeSeason: form.activeSeason || null,
+        hospitalHistory: form.hospitalHistory,
+        allergy: form.allergy,
+        temperamentType,
+        difficultyRank,
+        difficultyDescription,
+        isPublic: false,
+        createdAt: serverTimestamp(),
+      })
+
+      // 写真アップロード
+      if (form.photo) {
+        const storageRef = ref(storage, `owners/${user.uid}/dogs/${docRef.id}/profile.jpg`)
+        await uploadBytes(storageRef, form.photo)
+        const photoUrl = await getDownloadURL(storageRef)
+        const { doc, updateDoc } = await import('firebase/firestore')
+        await updateDoc(doc(db, 'owners', user.uid, 'dogs', docRef.id), { photoUrl })
+      }
+
+      router.push(`/uchinoko/${docRef.id}`)
+    } catch (e) {
+      setError('保存に失敗しました。もう一度お試しください。')
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-2xl mx-auto">
+        {/* ヘッダー */}
+        <div className="bg-white px-5 pt-5 lg:pt-6 pb-4 sticky top-0 z-10 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <button onClick={() => step === 0 ? router.back() : setStep((step - 1) as Step)} className="text-gray-500">
+              ←
+            </button>
+            <div className="flex-1">
+              <h1 className="text-lg font-bold text-gray-800">うちの子を登録</h1>
+              <p className="text-xs text-gray-400">ステップ {step + 1} / 3</p>
+            </div>
+          </div>
+          {/* プログレスバー */}
+          <div className="mt-3 flex gap-1.5">
+            {[0, 1, 2].map((s) => (
+              <div
+                key={s}
+                className={`h-1 flex-1 rounded-full transition-colors ${s <= step ? 'bg-orange-400' : 'bg-gray-200'}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="px-5 py-6">
+          {/* Step 0: 基本情報 */}
+          {step === 0 && (
+            <div className="space-y-5">
+              <h2 className="text-lg font-bold text-gray-800">基本情報</h2>
+
+              {/* 写真 */}
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-28 h-28 rounded-full overflow-hidden bg-orange-100 flex items-center justify-center border-2 border-dashed border-orange-300"
+                >
+                  {form.photoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.photoPreview} alt="preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl">🐾</span>
+                  )}
+                </button>
+                <p className="text-xs text-gray-400 mt-2">写真を追加（任意）</p>
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+              </div>
+
+              {/* 名前 */}
+              <Field label="名前 *">
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => set('name', e.target.value)}
+                  placeholder="例: ポチ"
+                  className={INPUT}
+                />
+              </Field>
+
+              {/* 生年月日 */}
+              <Field label="生年月日 *">
+                <input
+                  type="date"
+                  value={form.birthDate}
+                  onChange={(e) => set('birthDate', e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className={INPUT}
+                />
+              </Field>
+
+              {/* 体重 */}
+              <Field label="体重 (kg) *">
+                <input
+                  type="number"
+                  value={form.weight}
+                  onChange={(e) => set('weight', e.target.value)}
+                  placeholder="例: 3.5"
+                  step="0.1"
+                  min="0"
+                  className={INPUT}
+                />
+              </Field>
+
+              {/* 性別 */}
+              <Field label="性別 *">
+                <div className="flex gap-3">
+                  {(['male', 'female'] as const).map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => set('gender', g)}
+                      className={`flex-1 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
+                        form.gender === g
+                          ? 'border-orange-400 bg-orange-50 text-orange-600'
+                          : 'border-gray-200 bg-white text-gray-500'
+                      }`}
+                    >
+                      {g === 'male' ? '♂ オス' : '♀ メス'}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {/* 去勢・避妊 */}
+              <Field label="去勢・避妊">
+                <div className="flex gap-3">
+                  {([true, false] as const).map((v) => (
+                    <button
+                      key={String(v)}
+                      onClick={() => set('neutered', v)}
+                      className={`flex-1 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
+                        form.neutered === v
+                          ? 'border-orange-400 bg-orange-50 text-orange-600'
+                          : 'border-gray-200 bg-white text-gray-500'
+                      }`}
+                    >
+                      {v ? '済み' : '未'}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {/* 犬種 */}
+              <Field label="犬種 *">
+                <select
+                  value={form.breed}
+                  onChange={(e) => set('breed', e.target.value)}
+                  className={INPUT}
+                >
+                  {ALL_BREEDS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </Field>
+
+              <button
+                onClick={() => {
+                  if (!form.name || !form.birthDate || !form.weight) {
+                    setError('名前・生年月日・体重は必須です')
+                    return
+                  }
+                  setError('')
+                  setStep(1)
+                }}
+                className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-base hover:bg-orange-600 transition-colors"
+              >
+                次へ →
+              </button>
+              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            </div>
+          )}
+
+          {/* Step 1: 性格診断 */}
+          {step === 1 && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-bold text-gray-800">性格と行動を教えてください</h2>
+
+              {/* 物覚え (X軸) */}
+              <Card label="物覚えはどうですか？">
+                <div className="flex flex-col gap-2">
+                  {X_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => set('x', opt.value)}
+                      className={`py-3 px-4 rounded-xl border-2 text-sm font-medium text-left transition-all ${
+                        form.x === opt.value
+                          ? 'border-orange-400 bg-orange-50 text-orange-600'
+                          : 'border-gray-200 bg-white text-gray-600'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </Card>
+
+              {/* テンション (Y軸) */}
+              <Card label="テンションはどうですか？">
+                <div className="flex flex-col gap-2">
+                  {Y_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => set('y', opt.value)}
+                      className={`py-3 px-4 rounded-xl border-2 text-sm font-medium text-left transition-all ${
+                        form.y === opt.value
+                          ? 'border-orange-400 bg-orange-50 text-orange-600'
+                          : 'border-gray-200 bg-white text-gray-600'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </Card>
+
+              {/* ToggleItems */}
+              <Card label="生活スタイル">
+                <div className="space-y-3">
+                  <Toggle label="多頭飼いですか？" value={form.multiDog} onChange={(v) => set('multiDog', v)} />
+                  <Toggle label="おもちゃで遊びますか？" value={form.toyLover} onChange={(v) => set('toyLover', v)} />
+                  <Toggle label="一緒に寝ていますか？" value={form.sleepTogether} onChange={(v) => set('sleepTogether', v)} />
+                  <Toggle label="入れない部屋がありますか？" value={form.restrictedRoom} onChange={(v) => set('restrictedRoom', v)} />
+                </div>
+              </Card>
+
+              {/* リード/ハーネス */}
+              <Card label="お散歩スタイル">
+                <div className="flex gap-3">
+                  {(['lead', 'harness'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => set('leadType', t)}
+                      className={`flex-1 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
+                        form.leadType === t
+                          ? 'border-orange-400 bg-orange-50 text-orange-600'
+                          : 'border-gray-200 bg-white text-gray-500'
+                      }`}
+                    >
+                      {t === 'lead' ? '🐕 リード派' : '🦺 ハーネス派'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3">
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">散歩頻度</label>
+                  <select
+                    value={form.walkFrequency}
+                    onChange={(e) => set('walkFrequency', e.target.value)}
+                    className={INPUT}
+                  >
+                    {WALK_FREQUENCY_OPTIONS.map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </select>
+                </div>
+              </Card>
+
+              {/* 健康・アレルギー */}
+              <Card label="健康情報">
+                <div className="space-y-3">
+                  <Toggle label="通院歴がありますか？" value={form.hospitalHistory} onChange={(v) => set('hospitalHistory', v)} />
+                  <Toggle label="アレルギーがありますか？" value={form.allergy} onChange={(v) => set('allergy', v)} />
+                </div>
+                <div className="mt-4">
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">元気な季節（任意）</label>
+                  <div className="flex gap-3">
+                    {([['', 'どちらも'], ['summer', '夏'], ['winter', '冬']] as const).map(([val, label]) => (
+                      <button
+                        key={val}
+                        onClick={() => set('activeSeason', val)}
+                        className={`flex-1 py-2.5 rounded-xl border-2 font-medium text-sm transition-all ${
+                          form.activeSeason === val
+                            ? 'border-orange-400 bg-orange-50 text-orange-600'
+                            : 'border-gray-200 bg-white text-gray-500'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+
+              <button
+                onClick={() => setStep(2)}
+                className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-base hover:bg-orange-600 transition-colors"
+              >
+                診断結果を見る →
+              </button>
+            </div>
+          )}
+
+          {/* Step 2: 診断結果 */}
+          {step === 2 && (
+            <div className="space-y-5">
+              <h2 className="text-lg font-bold text-gray-800">診断結果</h2>
+
+              {/* 性格タイプ */}
+              <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
+                <p className="text-xs font-semibold text-orange-400 uppercase tracking-wider mb-1">性格タイプ</p>
+                <p className="text-2xl font-bold text-orange-600 mb-2">{temperamentType}</p>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {getTemperamentDescription(temperamentType)}
+                </p>
+              </div>
+
+              {/* しつけ難易度 */}
+              <div className={`rounded-2xl p-5 border ${
+                difficultyRank === 'A' ? 'bg-green-50 border-green-100' :
+                difficultyRank === 'B' ? 'bg-blue-50 border-blue-100' :
+                'bg-yellow-50 border-yellow-100'
+              }`}>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">しつけ難易度</p>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className={`text-3xl font-bold ${
+                    difficultyRank === 'A' ? 'text-green-600' :
+                    difficultyRank === 'B' ? 'text-blue-600' : 'text-yellow-600'
+                  }`}>
+                    ランク {difficultyRank}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed">{difficultyDescription}</p>
+              </div>
+
+              {/* 登録情報サマリ */}
+              <div className="bg-white rounded-2xl p-4 border border-gray-100 space-y-2">
+                <p className="text-sm font-bold text-gray-700">登録内容</p>
+                <Row label="名前" value={form.name} />
+                <Row label="犬種" value={form.breed} />
+                <Row label="性別" value={form.gender === 'male' ? 'オス' : 'メス'} />
+                <Row label="体重" value={`${form.weight}kg`} />
+              </div>
+
+              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-base hover:bg-orange-600 transition-colors disabled:opacity-50"
+              >
+                {saving ? '保存中...' : '登録する 🐾'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ===== 小コンポーネント =====
+const INPUT = 'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white text-gray-800 text-sm'
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function Card({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+      <p className="text-sm font-bold text-gray-700 mb-3">{label}</p>
+      {children}
+    </div>
+  )
+}
+
+function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-600">{label}</span>
+      <button
+        onClick={() => onChange(!value)}
+        className={`w-12 h-6 rounded-full transition-colors ${value ? 'bg-orange-400' : 'bg-gray-300'}`}
+      >
+        <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${value ? 'translate-x-6' : 'translate-x-0'}`} />
+      </button>
+    </div>
+  )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between text-sm">
+      <span className="text-gray-500">{label}</span>
+      <span className="text-gray-800 font-medium">{value}</span>
+    </div>
+  )
+}

@@ -1,0 +1,94 @@
+'use client'
+
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { PawPrint, Calendar, Package, Heart, ChevronRight } from 'lucide-react'
+
+export default function ProfilePage() {
+  const { user, owner, signOut } = useAuth()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.replace('/home')
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center justify-center py-20 px-5 gap-5">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+            <span className="text-3xl text-gray-300">👤</span>
+          </div>
+          <p className="text-gray-500 text-center text-sm">ログインするとうちの子の登録や予約ができます</p>
+          <Link href="/auth" className="w-full max-w-xs">
+            <button className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors text-sm">
+              ログイン / 新規登録
+            </button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 px-6 lg:px-10 py-6">
+      <div className="max-w-xl mx-auto space-y-8">
+        {/* プロフィールセクション */}
+        <section className="space-y-3">
+          <h1 className="text-lg font-bold text-gray-900">プロフィール</h1>
+
+          {/* 飼い主プロフィールカード */}
+          <div className="bg-white rounded-xl p-4 flex items-center gap-4">
+            <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center text-xl font-bold text-orange-500">
+              {owner?.displayName?.[0] ?? 'U'}
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-gray-900 text-base">{owner?.displayName ?? 'オーナー'}</p>
+              <p className="text-gray-400 text-sm">{owner?.email}</p>
+            </div>
+          </div>
+
+          {/* メニュー: 飼い主プロフィール / お気に入り */}
+          <div className="bg-white rounded-xl overflow-hidden">
+            <MenuItem label="飼い主プロフィール" Icon={PawPrint} href="/profile/owner" />
+          </div>
+          <div className="bg-white rounded-xl overflow-hidden">
+            <MenuItem label="お気に入り" Icon={Heart} href="/profile/favorites" />
+          </div>
+        </section>
+
+        {/* 注文履歴セクション */}
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold text-gray-900">注文履歴</h2>
+          <div className="bg-white rounded-xl overflow-hidden">
+            <MenuItem label="予約履歴" Icon={Calendar} href="/reservations" />
+            <MenuItem label="注文履歴" Icon={Package} href="/orders" />
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+function MenuItem({
+  label,
+  Icon,
+  href,
+}: {
+  label: string
+  Icon: React.ComponentType<{ size?: number; className?: string }>
+  href: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
+    >
+      <Icon size={18} className="text-gray-500" />
+      <span className="flex-1 text-sm font-medium text-gray-700">{label}</span>
+      <ChevronRight size={16} className="text-gray-300" />
+    </Link>
+  )
+}
