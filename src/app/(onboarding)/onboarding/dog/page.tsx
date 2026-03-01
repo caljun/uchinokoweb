@@ -383,31 +383,6 @@ export default function OnboardingDogPage() {
                 </div>
               </Card>
 
-              <Card label="健康情報">
-                <div className="space-y-3">
-                  <Toggle label="通院歴がありますか？" value={form.hospitalHistory} onChange={(v) => set('hospitalHistory', v)} />
-                  <Toggle label="アレルギーがありますか？" value={form.allergy} onChange={(v) => set('allergy', v)} />
-                </div>
-                <div className="mt-4">
-                  <label className="text-sm font-medium text-gray-600 mb-1 block">元気な季節（任意）</label>
-                  <div className="flex gap-3">
-                    {([['', 'どちらも'], ['summer', '夏'], ['winter', '冬']] as const).map(([val, label]) => (
-                      <button
-                        key={val}
-                        onClick={() => set('activeSeason', val)}
-                        className={`flex-1 py-2.5 rounded-xl border-2 font-medium text-sm transition-all ${
-                          form.activeSeason === val
-                            ? 'border-orange-400 bg-orange-50 text-orange-600'
-                            : 'border-gray-200 bg-white text-gray-500'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-
               <button
                 onClick={() => setStep(2)}
                 className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-base hover:bg-orange-600 transition-colors"
