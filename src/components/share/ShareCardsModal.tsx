@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { X, Download, Loader2 } from 'lucide-react'
+import { X, Share2, Loader2 } from 'lucide-react'
 import { Dog } from '@/types/dog'
 import { getBreedDescription } from '@/lib/diagnosis'
 
@@ -61,15 +61,17 @@ export function ShareCardsModal({ dog, onClose }: Props) {
       .catch(() => setPhotoSrc(''))
   }, [dog.photoUrl])
 
-  const handleDownload = async () => {
+  const handleShare = async () => {
     setGenerating(true)
     try {
       const html2canvas = (await import('html2canvas')).default
       const refs = [card1Ref, card2Ref, card3Ref]
+
+      // 全カードを File に変換
+      const files: File[] = []
       for (let i = 0; i < refs.length; i++) {
         const el = refs[i].current
         if (!el) continue
-        // img が全部ロードされるまで待つ
         await Promise.all(
           Array.from(el.querySelectorAll('img')).map((img) => {
             if (img.complete) return Promise.resolve()
@@ -88,11 +90,26 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           width: CARD_W,
           height: CARD_H,
         })
-        const link = document.createElement('a')
-        link.download = `${dog.name}_card${i + 1}.png`
-        link.href = canvas.toDataURL('image/png', 0.95)
-        link.click()
-        await new Promise((r) => setTimeout(r, 400))
+        const blob = await new Promise<Blob>((resolve) =>
+          canvas.toBlob((b) => resolve(b!), 'image/png', 0.95)
+        )
+        files.push(new File([blob], `${dog.name}_card${i + 1}.png`, { type: 'image/png' }))
+      }
+
+      // Web Share API（iOS/Android）→ 共有シートからギャラリー保存可能
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files, title: `${dog.name}のシェアカード` })
+      } else {
+        // デスクトップ: 順番にダウンロード
+        for (const file of files) {
+          const url = URL.createObjectURL(file)
+          const link = document.createElement('a')
+          link.download = file.name
+          link.href = url
+          link.click()
+          URL.revokeObjectURL(url)
+          await new Promise((r) => setTimeout(r, 300))
+        }
       }
     } finally {
       setGenerating(false)
@@ -171,7 +188,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
         {/* ダウンロードボタン */}
         <div className="px-5 pb-8">
           <button
-            onClick={handleDownload}
+            onClick={handleShare}
             disabled={generating}
             className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors disabled:opacity-60"
           >
@@ -182,8 +199,8 @@ export function ShareCardsModal({ dog, onClose }: Props) {
               </>
             ) : (
               <>
-                <Download size={16} />
-                3枚まとめてダウンロード
+                <Share2 size={16} />
+                3枚まとめて保存・シェア
               </>
             )}
           </button>
