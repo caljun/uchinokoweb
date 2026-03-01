@@ -38,7 +38,7 @@ export default function AuthPage() {
       {/* ロゴ */}
       <div className="mb-10 text-center">
         <div className="text-5xl mb-2">🐾</div>
-        <h1 className="text-3xl font-bold text-orange-500">うちの子</h1>
+        <h1 className="text-3xl font-bold text-orange-500">ウチの子</h1>
         <p className="text-gray-500 mt-1 text-sm">わんちゃんと飼い主さんをつなぐ</p>
       </div>
 

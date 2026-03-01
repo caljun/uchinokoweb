@@ -9,13 +9,13 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "うちの子",
+  title: "ウチの子",
   description: "わんちゃんと飼い主さんをつなぐプラットフォーム",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "うちの子",
+    title: "ウチの子",
   },
   formatDetection: { telephone: false },
 };

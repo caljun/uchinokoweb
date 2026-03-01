@@ -8,7 +8,11 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore'
+import {
+  doc, getDoc, setDoc, updateDoc, serverTimestamp,
+  arrayUnion, arrayRemove,
+  collection, getDocs, query, limit,
+} from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 
 export interface OwnerProfile {
@@ -41,11 +45,13 @@ export interface OwnerProfile {
 interface AuthContextType {
   user: User | null
   owner: OwnerProfile | null
+  hasDog: boolean | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, displayName: string) => Promise<void>
   signOut: () => Promise<void>
   reloadOwner: () => Promise<void>
+  setHasDog: (v: boolean) => void
   toggleFavoriteStore: (storeId: string) => Promise<void>
 }
 
@@ -94,13 +100,19 @@ function parseOwner(uid: string, data: Record<string, unknown>): OwnerProfile {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [owner, setOwner] = useState<OwnerProfile | null>(null)
+  const [hasDog, setHasDog] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchOwner = useCallback(async (uid: string) => {
     const ownerDoc = await getDoc(doc(db, 'owners', uid))
     if (ownerDoc.exists()) {
       setOwner(parseOwner(uid, ownerDoc.data() as Record<string, unknown>))
+    } else {
+      setOwner(null)
     }
+    // 犬が1頭でも登録されているか確認
+    const dogsSnap = await getDocs(query(collection(db, 'owners', uid, 'dogs'), limit(1)))
+    setHasDog(!dogsSnap.empty)
   }, [])
 
   useEffect(() => {
@@ -110,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchOwner(firebaseUser.uid)
       } else {
         setOwner(null)
+        setHasDog(null)
       }
       setLoading(false)
     })
@@ -148,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, owner, fetchOwner])
 
   return (
-    <AuthContext.Provider value={{ user, owner, loading, signIn, signUp, signOut, reloadOwner, toggleFavoriteStore }}>
+    <AuthContext.Provider value={{ user, owner, hasDog, loading, signIn, signUp, signOut, reloadOwner, setHasDog, toggleFavoriteStore }}>
       {children}
     </AuthContext.Provider>
   )

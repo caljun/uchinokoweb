@@ -1,6 +1,6 @@
 {
-  "name": "うちの子",
-  "short_name": "うちの子",
+  "name": "ウチの子",
+  "short_name": "ウチの子",
   "description": "わんちゃんと飼い主さんをつなぐプラットフォーム",
   "start_url": "/home",
   "display": "standalone",

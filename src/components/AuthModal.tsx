@@ -62,7 +62,7 @@ export default function AuthModal() {
         <div className="px-6 pb-8 pt-0">
           <div className="text-center mb-6">
             <div className="text-4xl mb-2">🐾</div>
-            <h2 className="text-xl font-bold text-orange-500">うちの子</h2>
+            <h2 className="text-xl font-bold text-orange-500">ウチの子</h2>
             <p className="text-gray-500 text-xs mt-1">わんちゃんと飼い主さんをつなぐ</p>
           </div>
 
