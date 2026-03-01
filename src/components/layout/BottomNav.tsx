@@ -17,8 +17,11 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-start z-50"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-center z-50"
+      style={{
+        height: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
     >
       {NAV_ITEMS.map(({ href, label, Icon }) => {
         const active = pathname === href
@@ -26,11 +29,11 @@ export default function BottomNav() {
           <Link
             key={href}
             href={href}
-            className={`flex-1 flex flex-col items-center gap-1 pt-3 pb-2 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-1 transition-colors ${
               active ? 'text-orange-500' : 'text-gray-400'
             }`}
           >
-            <Icon size={22} />
+            <Icon size={24} />
             <span className="text-xs font-medium">{label}</span>
           </Link>
         )
