@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { Store, StoreProduct } from '@/types/store'
+import { Store, StoreProduct, WeeklyOpenHours } from '@/types/store'
 import {
   MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight,
   Package, Store as StoreIcon, Star, ArrowLeft,
@@ -183,8 +183,36 @@ export default function StoreDetailPage() {
   )
 }
 
+const DAY_LABELS: Record<string, string> = {
+  monday: '月', tuesday: '火', wednesday: '水', thursday: '木',
+  friday: '金', saturday: '土', sunday: '日',
+}
+const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+function formatWeeklyHours(hours: WeeklyOpenHours): string {
+  return DAY_ORDER
+    .map((day) => {
+      const dayHours = hours[day as keyof WeeklyOpenHours]
+      const label = DAY_LABELS[day]
+      if (!dayHours) return `${label}: 定休日`
+      return `${label}: ${dayHours.open}〜${dayHours.close}`
+    })
+    .join('\n')
+}
+
+function resolveOpenHoursText(store: Store): string | null {
+  if (store.openHoursDisplay) return store.openHoursDisplay
+  if (typeof store.openHours === 'string') return store.openHours
+  if (store.openHours && typeof store.openHours === 'object') {
+    return formatWeeklyHours(store.openHours as WeeklyOpenHours)
+  }
+  return null
+}
+
 // ── 基本情報タブ ──────────────────────────────────────────────────
 function InfoTab({ store }: { store: Store }) {
+  const openHoursText = resolveOpenHoursText(store)
+
   return (
     <div className="space-y-4">
       {/* 説明 */}
@@ -199,20 +227,11 @@ function InfoTab({ store }: { store: Store }) {
         {store.address && (
           <InfoRow icon={<MapPin size={16} />} label="住所" value={store.address} />
         )}
-        {store.openHours && typeof store.openHours === 'string' && (
-          <InfoRow icon={<Clock size={16} />} label="営業時間" value={store.openHours} />
+        {openHoursText && (
+          <InfoRow icon={<Clock size={16} />} label="営業時間" value={openHoursText} />
         )}
-        {store.openHours && typeof store.openHours === 'object' && (
-          <InfoRow
-            icon={<Clock size={16} />}
-            label="営業時間"
-            value={Object.entries(store.openHours as Record<string, string>)
-              .map(([day, hours]) => `${day}: ${hours}`)
-              .join('\n')}
-          />
-        )}
-        {(store as Store & { holiday?: string }).holiday && (
-          <InfoRow icon={<Clock size={16} />} label="定休日" value={(store as Store & { holiday?: string }).holiday!} />
+        {store.holiday && (
+          <InfoRow icon={<Clock size={16} />} label="定休日" value={store.holiday} />
         )}
         {store.phone && (
           <InfoRow icon={<Phone size={16} />} label="電話番号" value={store.phone} />

@@ -34,6 +34,21 @@ export interface StoreLocation {
   longitude: number
 }
 
+export interface DayOpenHours {
+  open: string
+  close: string
+}
+
+export interface WeeklyOpenHours {
+  monday?: DayOpenHours | null
+  tuesday?: DayOpenHours | null
+  wednesday?: DayOpenHours | null
+  thursday?: DayOpenHours | null
+  friday?: DayOpenHours | null
+  saturday?: DayOpenHours | null
+  sunday?: DayOpenHours | null
+}
+
 export interface Store {
   id: string
   categories: string[]
@@ -42,7 +57,8 @@ export interface Store {
   phone?: string
   email?: string
   description?: string
-  openHours?: string
+  openHoursDisplay?: string
+  openHours?: string | WeeklyOpenHours
   isAcceptingReservations?: boolean
   holiday?: string
   accepted?: StoreAccepted

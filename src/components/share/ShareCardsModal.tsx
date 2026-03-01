@@ -112,8 +112,8 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-0 sm:px-4">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-sm overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden">
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div>
