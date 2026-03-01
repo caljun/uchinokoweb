@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { X, Share2, Loader2 } from 'lucide-react'
 import { Dog } from '@/types/dog'
 import { getBreedDescription } from '@/lib/diagnosis'
@@ -32,8 +32,12 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   const card1Ref = useRef<HTMLDivElement>(null)
   const card2Ref = useRef<HTMLDivElement>(null)
   const card3Ref = useRef<HTMLDivElement>(null)
-  const [generating, setGenerating] = useState(false)
+
   const [photoSrc, setPhotoSrc] = useState<string>('')
+  const [cardUrls, setCardUrls] = useState<string[]>([])
+  const [cardFiles, setCardFiles] = useState<File[]>([])
+  const [loading, setLoading] = useState(true)
+  const [sharing, setSharing] = useState(false)
 
   const ageLabel = AGE_LABELS[dog.ageGroup] ?? '成犬期'
   const sizeLabel = SIZE_LABELS[dog.breedSize] ?? '小型犬'
@@ -43,32 +47,34 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   const breedInfo = getBreedDescription(dog.breed)
   const diffParagraphs = (dog.difficultyDescription ?? '').split('\n\n').filter(Boolean)
 
-  // 犬の写真を base64 data URL に変換（html2canvas が blob: URL を読めないため）
+  // Step1: 犬の写真を base64 に変換
   useEffect(() => {
-    if (!dog.photoUrl) return
-    fetch(dog.photoUrl)
+    if (!dog.photoUrl) { setPhotoSrc(''); return }
+    fetch(`/api/image-proxy?url=${encodeURIComponent(dog.photoUrl)}`)
       .then((r) => r.blob())
-      .then(
-        (blob) =>
-          new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(blob)
-          })
-      )
-      .then((dataUrl) => setPhotoSrc(dataUrl))
+      .then((blob) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      }))
+      .then(setPhotoSrc)
       .catch(() => setPhotoSrc(''))
   }, [dog.photoUrl])
 
-  const handleShare = async () => {
-    setGenerating(true)
+  // Step2: 写真の準備ができたらカード生成（バックグラウンド）
+  const photoReady = !dog.photoUrl || photoSrc !== ''
+
+  const generateCards = useCallback(async () => {
+    setLoading(true)
     try {
+      // DOM が描画されるのを待つ
+      await new Promise((r) => setTimeout(r, 300))
       const html2canvas = (await import('html2canvas')).default
       const refs = [card1Ref, card2Ref, card3Ref]
-
-      // 全カードを File に変換
+      const urls: string[] = []
       const files: File[] = []
+
       for (let i = 0; i < refs.length; i++) {
         const el = refs[i].current
         if (!el) continue
@@ -90,33 +96,49 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           width: CARD_W,
           height: CARD_H,
         })
+        urls.push(canvas.toDataURL('image/png', 0.95))
         const blob = await new Promise<Blob>((resolve) =>
           canvas.toBlob((b) => resolve(b!), 'image/png', 0.95)
         )
         files.push(new File([blob], `${dog.name}_card${i + 1}.png`, { type: 'image/png' }))
       }
 
-      // Web Share API（iOS/Android）→ 共有シートからギャラリー保存可能
-      if (navigator.canShare && navigator.canShare({ files })) {
-        await navigator.share({ files, title: `${dog.name}のシェアカード` })
+      setCardUrls(urls)
+      setCardFiles(files)
+    } finally {
+      setLoading(false)
+    }
+  }, [dog.name])
+
+  useEffect(() => {
+    if (!photoReady) return
+    generateCards()
+  }, [photoReady, generateCards])
+
+  // ボタン押下時は既にファイルが揃っているので即 share → iOS ジェスチャー制限を回避
+  const handleShare = async () => {
+    if (cardFiles.length === 0) return
+    setSharing(true)
+    try {
+      if (navigator.canShare && navigator.canShare({ files: cardFiles })) {
+        await navigator.share({ files: cardFiles, title: `${dog.name}のシェアカード` })
       } else {
-        // デスクトップ: 順番にダウンロード
-        for (const file of files) {
+        // デスクトップ fallback: ダウンロード
+        for (const file of cardFiles) {
           const url = URL.createObjectURL(file)
-          const link = document.createElement('a')
-          link.download = file.name
-          link.href = url
-          link.click()
+          const a = document.createElement('a')
+          a.download = file.name
+          a.href = url
+          a.click()
           URL.revokeObjectURL(url)
           await new Promise((r) => setTimeout(r, 300))
         }
       }
     } finally {
-      setGenerating(false)
+      setSharing(false)
     }
   }
 
-  // ─── カードスタイル基底 ───
   const baseCard: React.CSSProperties = {
     width: CARD_W,
     height: CARD_H,
@@ -135,7 +157,9 @@ export function ShareCardsModal({ dog, onClose }: Props) {
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div>
             <p className="font-bold text-gray-900 text-base">シェアカード</p>
-            <p className="text-xs text-gray-400 mt-0.5">3枚の画像をSNSでシェアしよう</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {loading ? '画像を生成中...' : 'iOSは長押しでも保存できます'}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -145,63 +169,37 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           </button>
         </div>
 
-        {/* プレビュー（3枚） */}
-        <div className="px-5 pb-4 flex gap-3 overflow-x-auto">
-          {/* Card 1 preview */}
-          <div className="shrink-0 w-24 h-32 rounded-xl overflow-hidden relative bg-orange-50 border border-gray-100">
-            {(photoSrc || dog.photoUrl) && (
+        {/* カードプレビュー */}
+        {loading ? (
+          <div className="flex items-center justify-center py-14">
+            <Loader2 size={32} className="animate-spin text-orange-400" />
+          </div>
+        ) : (
+          <div className="px-5 pb-4 flex gap-3 overflow-x-auto">
+            {cardUrls.map((url, i) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={photoSrc || dog.photoUrl}
-                alt={dog.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                key={i}
+                src={url}
+                alt={`カード${i + 1}`}
+                className="shrink-0 rounded-xl shadow-sm"
+                style={{ height: 160, width: 'auto' }}
               />
-            )}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.6))', padding: '16px 6px 6px' }}>
-              <p style={{ color: 'white', fontWeight: 700, fontSize: 10, textAlign: 'center', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{dog.name}</p>
-            </div>
+            ))}
           </div>
+        )}
 
-          {/* Card 2 preview */}
-          <div className="shrink-0 w-24 h-32 rounded-xl bg-white border border-gray-100 p-2 flex flex-col">
-            <p className="text-xs font-bold text-gray-900 truncate mb-1.5">{dog.name}</p>
-            <div className="grid grid-cols-2 gap-1 flex-1">
-              {[['年齢', ageLabel], ['性別', genderLabel], ['体重', `${dog.weight}kg`], ['犬種', dog.breed]].map(([l, v]) => (
-                <div key={l} className="bg-orange-50 rounded-md p-1">
-                  <p className="text-gray-400" style={{ fontSize: 7 }}>{l}</p>
-                  <p className="font-semibold text-gray-800 truncate" style={{ fontSize: 8 }}>{v}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-orange-500 font-bold mt-1.5 truncate" style={{ fontSize: 9 }}>{dog.temperamentType}</p>
-          </div>
-
-          {/* Card 3 preview */}
-          <div className="shrink-0 w-24 h-32 rounded-xl bg-white border border-gray-100 p-2">
-            <p className="font-bold text-gray-900 mb-1" style={{ fontSize: 8 }}>詳細説明</p>
-            <p className="text-gray-500 leading-relaxed" style={{ fontSize: 7 }}>
-              {diffParagraphs[0]?.slice(0, 120) ?? ''}
-            </p>
-          </div>
-        </div>
-
-        {/* ダウンロードボタン */}
+        {/* シェアボタン */}
         <div className="px-5 pb-8">
           <button
             onClick={handleShare}
-            disabled={generating}
+            disabled={loading || sharing || cardFiles.length === 0}
             className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors disabled:opacity-60"
           >
-            {generating ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                生成中...
-              </>
+            {sharing ? (
+              <><Loader2 size={16} className="animate-spin" />シェア中...</>
             ) : (
-              <>
-                <Share2 size={16} />
-                3枚まとめて保存・シェア
-              </>
+              <><Share2 size={16} />3枚まとめてシェア・保存</>
             )}
           </button>
         </div>
@@ -210,7 +208,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
       {/* ───── オフスクリーンカード（html2canvas 用） ───── */}
       <div style={{ position: 'fixed', top: 0, left: '-9999px', pointerEvents: 'none' }}>
 
-        {/* ===== CARD 1: Photo ===== */}
+        {/* CARD 1: Photo */}
         <div ref={card1Ref} style={{ ...baseCard, backgroundColor: '#FFF7ED' }}>
           {(photoSrc || dog.photoUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -222,26 +220,21 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 96, color: '#fed7aa' }}>🐾</div>
           )}
-          {/* グラデーションオーバーレイ */}
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.65))', padding: '100px 36px 44px' }}>
             <p style={{ color: 'white', fontSize: 46, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{dog.name}</p>
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 22, margin: '8px 0 0', fontWeight: 500 }}>
               {ageLabel} ・ {genderLabel} ・ {dog.breed}
             </p>
           </div>
-          {/* ブランド */}
           <div style={{ position: 'absolute', top: 28, right: 32 }}>
             <p style={{ color: 'white', fontSize: 24, fontWeight: 700, margin: 0, textShadow: '0 1px 6px rgba(0,0,0,0.5)', letterSpacing: '0.02em' }}>ウチの子</p>
           </div>
         </div>
 
-        {/* ===== CARD 2: Info ===== */}
+        {/* CARD 2: Info */}
         <div ref={card2Ref} style={{ ...baseCard, backgroundColor: 'white', padding: 44 }}>
-          {/* 名前 */}
           <p style={{ fontSize: 42, fontWeight: 700, color: '#111827', margin: '0 0 4px', lineHeight: 1.2 }}>{dog.name}</p>
           <p style={{ fontSize: 20, color: '#9ca3af', margin: '0 0 28px', fontWeight: 500 }}>{sizeLabel} ・ {dog.breed}</p>
-
-          {/* 基本情報グリッド */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 32 }}>
             {[
               { label: '年齢', value: ageLabel },
@@ -255,24 +248,17 @@ export function ShareCardsModal({ dog, onClose }: Props) {
               </div>
             ))}
           </div>
-
-          {/* 区切り線 */}
           <div style={{ height: 1, backgroundColor: '#f3f4f6', margin: '0 0 28px' }} />
-
-          {/* 性格タイプ */}
           <p style={{ fontSize: 17, color: '#9ca3af', margin: '0 0 8px', fontWeight: 500 }}>性格タイプ</p>
           <p style={{ fontSize: 34, fontWeight: 700, color: '#f97316', margin: '0 0 14px', lineHeight: 1.3 }}>{dog.temperamentType}</p>
           <p style={{ fontSize: 18, color: '#6b7280', lineHeight: 1.75, margin: 0 }}>
             {typeDesc.split('\n').slice(0, 2).join(' ')}
           </p>
-
-          {/* ブランド */}
           <p style={{ position: 'absolute', bottom: 36, right: 40, fontSize: 20, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
         </div>
 
-        {/* ===== CARD 3: Breed + Difficulty ===== */}
+        {/* CARD 3: Breed + Difficulty */}
         <div ref={card3Ref} style={{ ...baseCard, backgroundColor: 'white', padding: 44 }}>
-          {/* 犬種の特徴 */}
           {(breedInfo.purpose || breedInfo.pros) && (
             <>
               <p style={{ fontSize: 26, fontWeight: 700, color: '#111827', margin: '0 0 20px' }}>【{dog.breed}の特徴】</p>
@@ -285,8 +271,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
               <div style={{ height: 1, backgroundColor: '#f3f4f6', margin: '0 0 24px' }} />
             </>
           )}
-
-          {/* 詳細説明 */}
           <p style={{ fontSize: 20, color: '#9ca3af', margin: '0 0 14px', fontWeight: 500 }}>詳細説明</p>
           <div>
             {diffParagraphs.slice(0, 3).map((p, i) => (
@@ -295,8 +279,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
               </p>
             ))}
           </div>
-
-          {/* ブランド */}
           <p style={{ position: 'absolute', bottom: 36, right: 40, fontSize: 20, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
         </div>
 
