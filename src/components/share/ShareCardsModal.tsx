@@ -3,21 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { X, Share2, Loader2 } from 'lucide-react'
 import { Dog } from '@/types/dog'
-import { getBreedDescription } from '@/lib/diagnosis'
-
-const AGE_LABELS = ['パピー期', '成犬期', 'シニア期']
-const SIZE_LABELS = ['小型犬', '中型犬', '大型犬']
-
-const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
-  リーダータイプ:
-    '知恵があり勇敢なまとめ役タイプです。\n犬社会と人間社会での自分の役割を理解しており、人の役に立ちたいと思っています。\n仕事を与えて達成感を味わわせてあげましょう。',
-  右腕タイプ:
-    '活発で楽観的、好奇心旺盛なタイプです。\n目立つ失敗をすることもありますが、リーダータイプの犬や人のもとで能力が向上します。\n運動と刺激をしっかり与えてあげましょう。',
-  市民タイプ:
-    '遊びを通して序列確認をし合って過ごすタイプです。\n遊びがヒートアップしてケンカになりやすいですが、社交性があり比較的飼いやすいです。\n適度な遊び相手を見つけてあげましょう。',
-  守られタイプ:
-    '特定の人になつきやすく、その他の人には人見知りをするタイプです。\nいつも抱っこされていたいと思っています。\n環境の変化は苦手なので、社会化を意識して取り組みましょう。',
-}
+import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
 
 const CARD_W = 540
 const CARD_H = 720
@@ -39,11 +25,15 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   const [loading, setLoading] = useState(true)
   const [sharing, setSharing] = useState(false)
 
-  const ageLabel = AGE_LABELS[dog.ageGroup] ?? '成犬期'
-  const sizeLabel = SIZE_LABELS[dog.breedSize] ?? '小型犬'
+  const ageLabel = getAgeDisplayText(dog.birthDate, dog.breedSize)
   const genderLabel = dog.gender === 'male' ? 'オス' : 'メス'
-  const genderFull = dog.neutered ? `${genderLabel}（去勢済み）` : genderLabel
-  const typeDesc = TEMPERAMENT_DESCRIPTIONS[dog.temperamentType] ?? ''
+  const genderFull = dog.neutered ? `${genderLabel}（去勢・避妊済み）` : genderLabel
+  const typeDesc = dog.temperamentType ? (({
+    リーダータイプ: '知恵があり勇敢なまとめ役タイプです。\n犬社会と人間社会での自分の役割を理解しており、人の役に立ちたいと思っています。\n仕事を与えて達成感を味わわせてあげましょう。',
+    右腕タイプ: '活発で楽観的、好奇心旺盛なタイプです。\n目立つ失敗をすることもありますが、リーダータイプの犬や人のもとで能力が向上します。\n運動と刺激をしっかり与えてあげましょう。',
+    市民タイプ: '遊びを通して序列確認をし合って過ごすタイプです。\n遊びがヒートアップしてケンカになりやすいですが、社交性があり比較的飼いやすいです。\n適度な遊び相手を見つけてあげましょう。',
+    守られタイプ: '特定の人になつきやすく、その他の人には人見知りをするタイプです。\nいつも抱っこされていたいと思っています。\n環境の変化は苦手なので、社会化を意識して取り組みましょう。',
+  } as Record<string, string>)[dog.temperamentType] ?? '') : ''
   const breedInfo = getBreedDescription(dog.breed)
   const diffParagraphs = (dog.difficultyDescription ?? '').split('\n\n').filter(Boolean)
 
@@ -232,54 +222,93 @@ export function ShareCardsModal({ dog, onClose }: Props) {
         </div>
 
         {/* CARD 2: Info */}
-        <div ref={card2Ref} style={{ ...baseCard, backgroundColor: 'white', padding: 44 }}>
-          <p style={{ fontSize: 42, fontWeight: 700, color: '#111827', margin: '0 0 4px', lineHeight: 1.2 }}>{dog.name}</p>
-          <p style={{ fontSize: 20, color: '#9ca3af', margin: '0 0 28px', fontWeight: 500 }}>{sizeLabel} ・ {dog.breed}</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 32 }}>
+        <div ref={card2Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '36px' }}>
+          {/* App branding */}
+          <p style={{ fontSize: 18, fontWeight: 700, color: '#f97316', margin: '0 0 16px', letterSpacing: '0.02em' }}>ウチの子</p>
+
+          {/* Name card */}
+          <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '18px 24px', marginBottom: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ fontSize: 15, color: '#9ca3af', margin: 0, fontWeight: 500 }}>名前</p>
+            <p style={{ fontSize: 36, fontWeight: 800, color: '#111827', margin: 0 }}>{dog.name}</p>
+          </div>
+
+          {/* Info 2×2 grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
             {[
-              { label: '年齢', value: ageLabel },
-              { label: '性別', value: genderFull },
-              { label: '体重', value: `${dog.weight} kg` },
-              { label: '犬種', value: dog.breed },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ backgroundColor: '#FFF7ED', borderRadius: 16, padding: '16px 20px' }}>
-                <p style={{ fontSize: 16, color: '#9ca3af', margin: '0 0 5px', fontWeight: 500 }}>{label}</p>
-                <p style={{ fontSize: 20, fontWeight: 600, color: '#1f2937', margin: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{value}</p>
+              { icon: '📅', label: '年齢', value: ageLabel },
+              { icon: '🐾', label: '性別', value: genderFull },
+              { icon: '⚖️', label: '体重', value: `${dog.weight} kg` },
+              { icon: '🐕', label: '犬種', value: dog.breed },
+            ].map(({ icon, label, value }) => (
+              <div key={label} style={{ backgroundColor: 'white', borderRadius: 16, padding: '14px 18px', boxShadow: '0 2px 10px rgba(0,0,0,0.07)' }}>
+                <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 5px', fontWeight: 500 }}>{icon} {label}</p>
+                <p style={{ fontSize: 17, fontWeight: 600, color: '#1f2937', margin: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{value}</p>
               </div>
             ))}
           </div>
-          <div style={{ height: 1, backgroundColor: '#f3f4f6', margin: '0 0 28px' }} />
-          <p style={{ fontSize: 17, color: '#9ca3af', margin: '0 0 8px', fontWeight: 500 }}>性格タイプ</p>
-          <p style={{ fontSize: 34, fontWeight: 700, color: '#f97316', margin: '0 0 14px', lineHeight: 1.3 }}>{dog.temperamentType}</p>
-          <p style={{ fontSize: 18, color: '#6b7280', lineHeight: 1.75, margin: 0 }}>
-            {typeDesc.split('\n').slice(0, 2).join(' ')}
-          </p>
-          <p style={{ position: 'absolute', bottom: 36, right: 40, fontSize: 20, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
+
+          {/* Personality card */}
+          <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '20px 24px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+            <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 8px', fontWeight: 600, letterSpacing: '0.05em' }}>✦ 性格タイプ</p>
+            <p style={{ fontSize: 28, fontWeight: 700, color: '#f97316', margin: '0 0 10px', lineHeight: 1.2 }}>{dog.temperamentType}</p>
+            <p style={{ fontSize: 15, color: '#6b7280', lineHeight: 1.8, margin: 0 }}>
+              {typeDesc.split('\n').join('　')}
+            </p>
+          </div>
         </div>
 
         {/* CARD 3: Breed + Difficulty */}
-        <div ref={card3Ref} style={{ ...baseCard, backgroundColor: 'white', padding: 44 }}>
+        <div ref={card3Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '36px' }}>
+          {/* App branding */}
+          <p style={{ fontSize: 18, fontWeight: 700, color: '#f97316', margin: '0 0 16px', letterSpacing: '0.02em' }}>ウチの子</p>
+
+          {/* Breed characteristics card */}
           {(breedInfo.purpose || breedInfo.pros) && (
-            <>
-              <p style={{ fontSize: 26, fontWeight: 700, color: '#111827', margin: '0 0 20px' }}>【{dog.breed}の特徴】</p>
-              <div style={{ marginBottom: 24 }}>
-                {breedInfo.origin && <p style={{ fontSize: 17, color: '#6b7280', margin: '0 0 6px' }}>原産国: {breedInfo.origin}</p>}
-                {breedInfo.purpose && <p style={{ fontSize: 17, color: '#6b7280', margin: '0 0 6px' }}>目的: {breedInfo.purpose}</p>}
-                {breedInfo.pros && <p style={{ fontSize: 17, color: '#6b7280', margin: '0 0 6px' }}>長所: {breedInfo.pros}</p>}
-                {breedInfo.cons && <p style={{ fontSize: 17, color: '#6b7280', margin: '0 0 6px' }}>短所: {breedInfo.cons}</p>}
+            <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '16px 20px', marginBottom: 10, boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', margin: '0 0 10px' }}>🐶 {dog.breed}の特徴</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {breedInfo.origin && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <p style={{ fontSize: 11, color: '#9ca3af', margin: 0, minWidth: 40, fontWeight: 500 }}>原産国</p>
+                    <p style={{ fontSize: 12, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.origin}</p>
+                  </div>
+                )}
+                {breedInfo.purpose && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <p style={{ fontSize: 11, color: '#9ca3af', margin: 0, minWidth: 40, fontWeight: 500 }}>目的</p>
+                    <p style={{ fontSize: 12, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.purpose}</p>
+                  </div>
+                )}
+                {breedInfo.pros && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <p style={{ fontSize: 11, color: '#22c55e', margin: 0, minWidth: 40, fontWeight: 600 }}>長所</p>
+                    <p style={{ fontSize: 12, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.pros}</p>
+                  </div>
+                )}
+                {breedInfo.cons && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <p style={{ fontSize: 11, color: '#f87171', margin: 0, minWidth: 40, fontWeight: 600 }}>短所</p>
+                    <p style={{ fontSize: 12, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.cons}</p>
+                  </div>
+                )}
               </div>
-              <div style={{ height: 1, backgroundColor: '#f3f4f6', margin: '0 0 24px' }} />
-            </>
+              {breedInfo.chip && (
+                <p style={{ fontSize: 11, color: '#6b7280', margin: '10px 0 0', lineHeight: 1.7, borderTop: '1px solid #f3f4f6', paddingTop: 10 }}>{breedInfo.chip}</p>
+              )}
+            </div>
           )}
-          <p style={{ fontSize: 20, color: '#9ca3af', margin: '0 0 14px', fontWeight: 500 }}>詳細説明</p>
-          <div>
-            {diffParagraphs.slice(0, 3).map((p, i) => (
-              <p key={i} style={{ fontSize: 17, color: '#374151', lineHeight: 1.75, margin: i > 0 ? '14px 0 0' : '0' }}>
-                {p.replace(/\n/g, '')}
-              </p>
-            ))}
+
+          {/* Difficulty description card */}
+          <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '16px 20px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+            <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 8px', fontWeight: 600, letterSpacing: '0.05em' }}>✦ 詳細説明</p>
+            <div>
+              {diffParagraphs.slice(0, 3).map((p, i) => (
+                <p key={i} style={{ fontSize: 12, color: '#374151', lineHeight: 1.8, margin: i > 0 ? '8px 0 0' : '0' }}>
+                  {p.replace(/\n/g, '')}
+                </p>
+              ))}
+            </div>
           </div>
-          <p style={{ position: 'absolute', bottom: 36, right: 40, fontSize: 20, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
         </div>
 
       </div>
