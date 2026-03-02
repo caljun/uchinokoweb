@@ -6,7 +6,6 @@ import { Dog } from '@/types/dog'
 import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
 
 const CARD_W = 540
-const CARD_H = 720
 const FONT = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif'
 
 type Props = {
@@ -83,8 +82,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           allowTaint: false,
           backgroundColor: '#ffffff',
           logging: false,
-          width: CARD_W,
-          height: CARD_H,
         })
         urls.push(canvas.toDataURL('image/png', 0.95))
         const blob = await new Promise<Blob>((resolve) =>
@@ -131,7 +128,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
 
   const baseCard: React.CSSProperties = {
     width: CARD_W,
-    height: CARD_H,
     fontFamily: FONT,
     boxSizing: 'border-box',
     overflow: 'hidden',
