@@ -6,6 +6,7 @@ import { Dog } from '@/types/dog'
 import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
 
 const CARD_W = 540
+const CARD_H = 720
 const FONT = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif'
 
 type Props = {
@@ -67,6 +68,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
       for (let i = 0; i < refs.length; i++) {
         const el = refs[i].current
         if (!el) continue
+
         await Promise.all(
           Array.from(el.querySelectorAll('img')).map((img) => {
             if (img.complete) return Promise.resolve()
@@ -76,13 +78,31 @@ export function ShareCardsModal({ dog, onClose }: Props) {
             })
           })
         )
+
+        // 中身が CARD_H を超える場合は全体を縮小して収める
+        const originalTransform = el.style.transform
+        const originalTransformOrigin = el.style.transformOrigin
+        const contentHeight = el.scrollHeight
+        if (contentHeight > CARD_H) {
+          const scale = CARD_H / contentHeight
+          el.style.transformOrigin = 'top left'
+          el.style.transform = `scale(${scale})`
+        }
+
         const canvas = await html2canvas(el, {
           scale: 2,
           useCORS: true,
           allowTaint: false,
           backgroundColor: '#ffffff',
           logging: false,
+          width: CARD_W,
+          height: CARD_H,
         })
+
+        // スタイルを元に戻す
+        el.style.transform = originalTransform
+        el.style.transformOrigin = originalTransformOrigin
+
         urls.push(canvas.toDataURL('image/png', 0.95))
         const blob = await new Promise<Blob>((resolve) =>
           canvas.toBlob((b) => resolve(b!), 'image/png', 0.95)
@@ -128,6 +148,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
 
   const baseCard: React.CSSProperties = {
     width: CARD_W,
+    height: CARD_H,
     fontFamily: FONT,
     boxSizing: 'border-box',
     overflow: 'hidden',
