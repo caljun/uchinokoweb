@@ -1,32 +1,47 @@
 // DiagnosisHelper の TypeScript 移植版（iOSコード準拠）
 
-// ===== 犬種リスト =====
+// ===== 犬種リスト（iOS DiagnosisHelper.swift 準拠） =====
 const SMALL_BREEDS = [
-  'トイプードル', 'チワワ', 'ポメラニアン', 'マルチーズ', 'シーズー',
-  'パピヨン', 'ミニチュアダックスフンド', 'ミニチュアシュナウザー',
-  'ヨークシャーテリア', 'ペキニーズ', 'パグ', 'ボストンテリア',
-  'キャバリアキングチャールズスパニエル', 'ジャックラッセルテリア',
-  'シェットランドシープドッグ（ミニ）', 'ビションフリーゼ', 'マルプー',
-  'ポメプー', 'チワプー', 'ダップル', 'ミックス（小型）',
+  // iOS 小型犬
+  'トイプードル', 'チワワ', 'ポメラニアン', 'ヨークシャーテリア', 'マルチーズ',
+  'シーズー', 'パピヨン', 'ペキニーズ', 'ミニチュアダックスフンド',
+  'ミニチュアシュナウザー', 'チャイニーズ・クレステッド・ドッグ', 'ウェスティ',
+  '狆', 'キャバリア', 'ケアーンテリア', 'ジャックラッセルテリア',
+  'ミニチュアピンシャー', 'イタリアン・グレーハウンド', 'ウィペット', 'パグ',
+  'チベタン・スパニエル', 'ブリュッセル・グリフォン', 'トイ・マンチェスター・テリア',
+  'ノーフォーク・テリア', '日本スピッツ',
+  // web 表記ゆれ・独自追加（後方互換）
+  'キャバリアキングチャールズスパニエル', 'ウエストハイランドホワイトテリア',
+  'シェットランドシープドッグ（ミニ）', 'ビションフリーゼ',
+  'マルプー', 'ポメプー', 'チワプー', 'ダップル', 'ミックス（小型）',
 ]
 
 const MEDIUM_BREEDS = [
-  '柴犬', 'コーギー', 'フレンチブルドッグ', 'ビーグル',
-  'ボーダーコリー', 'シェルティ', 'コッカースパニエル',
-  'バセットハウンド', 'ウェルシュテリア', 'スタンダードプードル',
-  'サモエド', 'ハスキー（ミニ）', 'アメリカンコッカースパニエル',
-  'シバイヌ', 'ケアーンテリア', 'ウエストハイランドホワイトテリア',
-  'ミックス（中型）',
+  // iOS 中型犬
+  '柴犬', 'コーギー', 'フレンチブルドッグ', 'ビーグル', 'ボーダーコリー',
+  'シェルティ', 'コッカースパニエル', 'ボストンテリア', 'ブルテリア',
+  'エアデールテリア', 'アメリカンブリー', 'ピットブル', 'バセット・ハウンド',
+  'イングリッシュ・コッカー・スパニエル', 'ダックスフンド（スタンダード）',
+  'プチ・バセット・グリフォン・バンデーン', 'ブリタニー・スパニエル',
+  'オーストラリアン・シェパード', 'コーイケルホンディエ', 'ラフ・コリー',
+  // web 表記ゆれ・独自追加（後方互換）
+  'バセットハウンド', 'ウェルシュテリア', 'サモエド', 'ハスキー（ミニ）',
+  'アメリカンコッカースパニエル', 'シバイヌ', 'ミックス（中型）',
 ]
 
 const LARGE_BREEDS = [
+  // iOS 大型犬
   'ゴールデンレトリバー', 'ラブラドールレトリバー', 'シベリアンハスキー',
-  '秋田犬', 'バーニーズマウンテンドッグ', 'ジャーマンシェパード',
-  'ドーベルマン', 'グレートデン', 'アラスカンマラミュート',
-  'ロットワイラー', 'ボクサー', 'ワイマラナー', 'ブルドッグ',
-  'ダルメシアン', 'アフガンハウンド', 'グレーハウンド',
-  'アイリッシュセッター', 'セントバーナード', 'ニューファンドランド',
-  'ミックス（大型）',
+  '秋田犬', 'バーニーズマウンテンドッグ', 'ジャーマンシェパード', 'ホワイトシェパード',
+  'ドゥードゥル', 'スタンダードプードル', 'ドーベルマン', 'グレートピレニーズ',
+  'ジャイアントシュナウザー', 'ワイマラナー', 'フラットコーテッドレトリバー',
+  'ベルジアンマリノア', 'ロットワイラー', 'サルーキ', 'アフガン・ハウンド',
+  'ボルゾイ', 'イングリッシュ・ポインター', '紀州犬', '甲斐犬', '四国犬',
+  '北海道犬', '土佐犬', 'グレートデン', 'マスティフ', 'ドーゴ・アルヘンティーノ',
+  'ブルドッグ', 'ニューファンドランド', 'オーストラリアン・ラブラドゥードル', 'ボクサー',
+  // web 表記ゆれ・独自追加（後方互換）
+  'アフガンハウンド', 'アラスカンマラミュート', 'ダルメシアン', 'グレーハウンド',
+  'アイリッシュセッター', 'セントバーナード', 'ミックス（大型）',
 ]
 
 // ===== 年齢区分計算（犬種サイズ依存） =====
@@ -251,6 +266,91 @@ export const DOG_FOOD_OPTIONS = [
   'ロイヤルカナン', 'ヒルズ', 'ピュリナ', 'アカナ', 'オリジン',
   'ニュートロ', 'サイエンスダイエット', 'その他',
 ]
+
+// ===== 年齢表示ヘルパー（iOS AgeDisplayHelper.swift 準拠） =====
+
+function toDate(val: unknown): Date | null {
+  if (!val) return null
+  if (val instanceof Date) return val
+  if (typeof (val as { toDate?: () => Date }).toDate === 'function') {
+    return (val as { toDate: () => Date }).toDate()
+  }
+  return null
+}
+
+/** birthDate から「2歳」「3ヶ月」「5日」を返す */
+export function getActualAgeText(birthDate: unknown): string {
+  const date = toDate(birthDate)
+  if (!date) return '未設定'
+
+  const now = new Date()
+  const years =
+    now.getFullYear() -
+    date.getFullYear() -
+    (now.getMonth() < date.getMonth() ||
+    (now.getMonth() === date.getMonth() && now.getDate() < date.getDate())
+      ? 1
+      : 0)
+
+  if (years === 0) {
+    const months =
+      (now.getFullYear() - date.getFullYear()) * 12 +
+      (now.getMonth() - date.getMonth()) -
+      (now.getDate() < date.getDate() ? 1 : 0)
+    if (months > 0) return `${months}ヶ月`
+    const days = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+    if (days > 0) return `${days}日`
+    return '生後間もない'
+  }
+  return `${years}歳`
+}
+
+/** breedSize 別の換算式で人間年齢を返す（iOS 準拠） */
+export function getHumanAge(birthDate: unknown, breedSize: number): number | null {
+  const date = toDate(birthDate)
+  if (!date) return null
+
+  const now = new Date()
+  const years =
+    now.getFullYear() -
+    date.getFullYear() -
+    (now.getMonth() < date.getMonth() ||
+    (now.getMonth() === date.getMonth() && now.getDate() < date.getDate())
+      ? 1
+      : 0)
+
+  if (years === 0) {
+    const months =
+      (now.getFullYear() - date.getFullYear()) * 12 +
+      (now.getMonth() - date.getMonth()) -
+      (now.getDate() < date.getDate() ? 1 : 0)
+    return breedSize === 2
+      ? Math.max(1, months)
+      : Math.max(1, Math.round(months * 1.25))
+  }
+
+  if (breedSize === 0) {
+    if (years === 1) return 15
+    if (years === 2) return 24
+    return 24 + (years - 2) * 4
+  } else if (breedSize === 2) {
+    if (years === 1) return 12
+    if (years === 2) return 22
+    return 22 + (years - 2) * 6
+  } else {
+    if (years === 1) return 15
+    if (years === 2) return 24
+    return 24 + (years - 2) * 5
+  }
+}
+
+/** 「2歳（24歳）」「3ヶ月（3歳）」形式で返す（iOS getAgeDisplayText 準拠） */
+export function getAgeDisplayText(birthDate: unknown, breedSize: number): string {
+  const actual = getActualAgeText(birthDate)
+  if (actual === '未設定') return '未設定'
+  const human = getHumanAge(birthDate, breedSize)
+  return human !== null ? `${actual}（${human}歳）` : actual
+}
 
 // 犬種別詳細情報の型
 export interface BreedInfo {

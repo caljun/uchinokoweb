@@ -11,10 +11,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Dog, Diary, HealthRecord } from '@/types/dog'
 import { Pencil, Share2 } from 'lucide-react'
 import { ShareCardsModal } from '@/components/share/ShareCardsModal'
+import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
 
 type Tab = 'info' | 'diary' | 'health'
 
-const AGE_LABELS = ['パピー期', '成犬期', 'シニア期']
 const SIZE_LABELS = ['小型犬', '中型犬', '大型犬']
 const CONDITIONS = ['元気', '普通', 'ちょっと心配', 'しんどい']
 const APPETITES = ['よく食べた', '普通', 'あまり食べなかった']
@@ -40,27 +40,6 @@ function getTemperamentDescription(type: string): string {
   return TEMPERAMENT_DESCRIPTIONS[type] ?? ''
 }
 
-type BreedInfo = {
-  origin: string
-  purpose: string
-  pros: string
-  cons: string
-  chip: string
-}
-
-const BREED_DESCRIPTIONS: Record<string, BreedInfo> = {
-  柴犬: {
-    origin: '日本',
-    purpose: '狩猟 / 番犬',
-    pros: '忠実 / 勇敢',
-    cons: '独立心 / 抜け毛',
-    chip: '日本を代表する犬。換毛期ブラッシングを。',
-  },
-}
-
-function getBreedDescription(breed: string): BreedInfo {
-  return BREED_DESCRIPTIONS[breed] ?? { origin: '', purpose: '', pros: '', cons: '', chip: '' }
-}
 
 export default function UchinokoDetailPage() {
   const { dogId } = useParams<{ dogId: string }>()
@@ -75,6 +54,7 @@ export default function UchinokoDetailPage() {
   const [showDiaryModal, setShowDiaryModal] = useState(false)
   const [showHealthModal, setShowHealthModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const touchStartX = useRef<number | null>(null)
 
   useEffect(() => {
     if (!user || !dogId) return
@@ -140,7 +120,20 @@ export default function UchinokoDetailPage() {
               </div>
 
               {/* スライド（3枚） */}
-              <div className="relative max-w-md mx-auto overflow-hidden">
+              <div
+                className="relative max-w-md mx-auto overflow-hidden"
+                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
+                onTouchEnd={(e) => {
+                  if (touchStartX.current === null) return
+                  const diff = touchStartX.current - e.changedTouches[0].clientX
+                  if (Math.abs(diff) > 40) {
+                    setDetailSlide((prev) =>
+                      diff > 0 ? (prev === 2 ? 0 : prev + 1) : (prev === 0 ? 2 : prev - 1)
+                    )
+                  }
+                  touchStartX.current = null
+                }}
+              >
                 <div
                   className="flex transition-transform duration-300 ease-out"
                   style={{ transform: `translateX(-${detailSlide * 100}%)` }}
@@ -409,7 +402,7 @@ function EmptyState({ emoji, text }: { emoji: string; text: string }) {
 }
 
 function SummaryCard({ dog }: { dog: Dog }) {
-  const ageLabel = AGE_LABELS[dog.ageGroup] ?? '成犬期'
+  const ageLabel = getAgeDisplayText(dog.birthDate, dog.breedSize)
   const genderLabel = dog.gender === 'male' ? 'オス' : 'メス'
   const neuteredLabel = dog.neutered ? `${genderLabel}（去勢・避妊済み）` : genderLabel
 
