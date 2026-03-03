@@ -29,7 +29,7 @@ export default function BottomNav() {
           <Link
             key={href}
             href={href}
-            className={`flex-1 flex flex-col items-center gap-1 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
               active ? 'text-orange-500' : 'text-gray-400'
             }`}
           >
