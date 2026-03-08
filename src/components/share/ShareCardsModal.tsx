@@ -152,7 +152,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
     fontFamily: FONT,
     boxSizing: 'border-box',
     overflow: 'hidden',
-    borderRadius: 32,
+    borderRadius: 0,
     position: 'relative',
     flexShrink: 0,
   }
@@ -233,14 +233,14 @@ export function ShareCardsModal({ dog, onClose }: Props) {
               {ageLabel} ・ {genderLabel} ・ {dog.breed}
             </p>
           </div>
-          <div style={{ position: 'absolute', top: 28, right: 32 }}>
+          <div style={{ position: 'absolute', top: 28, left: 32 }}>
             <p style={{ color: 'white', fontSize: 24, fontWeight: 700, margin: 0, textShadow: '0 1px 6px rgba(0,0,0,0.5)', letterSpacing: '0.02em' }}>ウチの子</p>
           </div>
         </div>
 
         {/* CARD 2: Info */}
         <div ref={card2Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '88px 36px 36px' }}>
-          <div style={{ position: 'absolute', top: 28, right: 32 }}>
+          <div style={{ position: 'absolute', top: 28, left: 32 }}>
             <p style={{ fontSize: 24, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
           </div>
 
@@ -278,7 +278,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
 
         {/* CARD 3: Breed + Difficulty */}
         <div ref={card3Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '88px 36px 36px' }}>
-          <div style={{ position: 'absolute', top: 28, right: 32 }}>
+          <div style={{ position: 'absolute', top: 28, left: 32 }}>
             <p style={{ fontSize: 24, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
           </div>
 
