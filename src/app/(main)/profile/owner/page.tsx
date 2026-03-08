@@ -233,7 +233,7 @@ function EditModal({
           </Field>
 
           <Field label="生年月日（任意）">
-            <input type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} max={new Date().toISOString().split('T')[0]} className={INPUT} />
+            <input type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} max={new Date().toISOString().split('T')[0]} className={`${INPUT} min-w-0 max-w-full`} />
           </Field>
 
           <Field label="電話番号（任意）">
