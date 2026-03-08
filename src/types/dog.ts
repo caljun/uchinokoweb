@@ -7,6 +7,8 @@ export interface Dog {
   gender: string         // "male" | "female"
   neutered?: boolean
   breed: string
+  mixBreed1?: string     // ミックス時の1つ目の犬種
+  mixBreed2?: string     // ミックス時の2つ目の犬種
   breedSize: number      // 0=小型, 1=中型, 2=大型
 
   // 社会化マップ

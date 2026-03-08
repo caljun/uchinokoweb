@@ -9,12 +9,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import {
   calculateAgeGroup,
   getBreedSize,
+  getMixBreedSize,
   calculateTemperamentType,
   calculateDifficultyRank,
   getDifficultyDescription,
   getTemperamentDescription,
   getBreedDescription,
-  ALL_BREEDS,
+  PURE_BREEDS,
+  MIX_BREEDS,
   X_OPTIONS,
   Y_OPTIONS,
   WALK_FREQUENCY_OPTIONS,
@@ -30,6 +32,8 @@ interface FormData {
   gender: string
   neutered: boolean
   breed: string
+  mixBreed1: string
+  mixBreed2: string
   photo: File | null
   photoPreview: string | null
   existingPhotoUrl: string | null
@@ -59,6 +63,8 @@ export default function UchinokoEditPage() {
     gender: 'male',
     neutered: false,
     breed: 'わからない',
+    mixBreed1: '',
+    mixBreed2: '',
     photo: null,
     photoPreview: null,
     existingPhotoUrl: null,
@@ -95,6 +101,8 @@ export default function UchinokoEditPage() {
         gender: dog.gender,
         neutered: dog.neutered ?? false,
         breed: dog.breed,
+        mixBreed1: dog.mixBreed1 ?? '',
+        mixBreed2: dog.mixBreed2 ?? '',
         photo: null,
         photoPreview: dog.photoUrl ?? null,
         existingPhotoUrl: dog.photoUrl ?? null,
@@ -118,7 +126,9 @@ export default function UchinokoEditPage() {
     set('photoPreview', URL.createObjectURL(file))
   }
 
-  const breedSize = getBreedSize(form.breed)
+  const breedSize = form.breed.startsWith('ミックス') && form.mixBreed1 && form.mixBreed2
+    ? getMixBreedSize(form.mixBreed1, form.mixBreed2)
+    : getBreedSize(form.breed)
   const ageGroup = form.birthDate ? calculateAgeGroup(new Date(form.birthDate), breedSize) : 1
   const temperamentType = calculateTemperamentType(form.x, form.y)
   const difficultyRank = calculateDifficultyRank({
@@ -152,6 +162,7 @@ export default function UchinokoEditPage() {
         gender: form.gender,
         neutered: form.neutered,
         breed: form.breed,
+        ...(form.breed.startsWith('ミックス') && { mixBreed1: form.mixBreed1 || null, mixBreed2: form.mixBreed2 || null }),
         breedSize,
         x: form.x,
         y: form.y,
@@ -309,13 +320,49 @@ export default function UchinokoEditPage() {
               <Field label="犬種 *">
                 <select
                   value={form.breed}
-                  onChange={(e) => set('breed', e.target.value)}
+                  onChange={(e) => {
+                    set('breed', e.target.value)
+                    if (!e.target.value.startsWith('ミックス')) {
+                      set('mixBreed1', '')
+                      set('mixBreed2', '')
+                    }
+                  }}
                   className={INPUT}
                 >
-                  {ALL_BREEDS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
+                  <option value="わからない">わからない</option>
+                  <optgroup label="純血種">
+                    {PURE_BREEDS.map((b) => <option key={b} value={b}>{b}</option>)}
+                  </optgroup>
+                  <optgroup label="ミックス">
+                    {MIX_BREEDS.map((b) => <option key={b} value={b}>{b}</option>)}
+                  </optgroup>
                 </select>
+                {form.breed.startsWith('ミックス') && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">ミックス 1つ目</p>
+                      <select
+                        value={form.mixBreed1}
+                        onChange={(e) => set('mixBreed1', e.target.value)}
+                        className={INPUT}
+                      >
+                        <option value="">犬種を選択</option>
+                        {PURE_BREEDS.map((b) => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">ミックス 2つ目</p>
+                      <select
+                        value={form.mixBreed2}
+                        onChange={(e) => set('mixBreed2', e.target.value)}
+                        className={INPUT}
+                      >
+                        <option value="">犬種を選択</option>
+                        {PURE_BREEDS.map((b) => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </Field>
 
               <button
