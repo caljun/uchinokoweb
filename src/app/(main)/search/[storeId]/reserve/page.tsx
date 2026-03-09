@@ -211,6 +211,7 @@ export default function ReservationPage() {
         userId: user.uid,
         dogId: selectedDogId,
         dogName: dog.name,
+        dogPhoto: dog.photoUrl ?? null,
         dogInfo: {
           name: dog.name,
           photoUrl: dog.photoUrl ?? null,

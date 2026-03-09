@@ -118,12 +118,11 @@ export default function ReservationDetailPage() {
 
   // 支払い済みかどうか
   const isPaid = reservation.paymentStatus === 'paid' || reservation.status === 'completed'
-  // 支払いが必要かどうか（確定済み・未払い・servicePrice あり）
+  // 支払いが必要かどうか（店側が請求書送信済み = paymentInfo.status === 'pending'）
   const needsPayment =
     reservation.status === 'confirmed' &&
     !isPaid &&
-    !!reservation.servicePrice &&
-    reservation.servicePrice > 0
+    reservation.paymentInfo?.status === 'pending'
   // キャンセル可能かどうか（pending or confirmed、未払い）
   const canCancel =
     (reservation.status === 'pending' || reservation.status === 'confirmed') && !isPaid
@@ -198,6 +197,17 @@ export default function ReservationDetailPage() {
           </div>
         </div>
 
+        {/* 請求書待ちバナー（確定済み・未払い・paymentInfo なし） */}
+        {reservation.status === 'confirmed' && !isPaid && !reservation.paymentInfo && reservation.serviceType !== 'visit' && (
+          <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4">
+            <CreditCard size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-blue-700">お支払いの準備中</p>
+              <p className="text-xs text-blue-500 mt-0.5">施術後にお店から請求書が届きます</p>
+            </div>
+          </div>
+        )}
+
         {/* キャンセルボタン */}
         {canCancel && (
           <button
@@ -260,7 +270,7 @@ export default function ReservationDetailPage() {
 
       {/* キャンセル確認モーダル */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end lg:items-center justify-center px-5 pb-8 lg:pb-0">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end lg:items-center justify-center px-5 pb-24 lg:pb-0">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">予約をキャンセルしますか？</h3>
