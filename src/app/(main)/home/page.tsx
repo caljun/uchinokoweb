@@ -136,9 +136,16 @@ export default function HomePage() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square bg-gray-200 rounded-xl animate-pulse" />
+            <div className="flex gap-4 overflow-x-auto pb-2 -mx-6 px-6 lg:-mx-10 lg:px-10 scrollbar-hide">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="flex-shrink-0 w-36 lg:w-44">
+                  <div className="aspect-square bg-gray-200 rounded-xl animate-pulse" />
+                  <div className="p-2 space-y-1.5">
+                    <div className="h-2.5 w-2/3 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 w-1/2 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                </div>
               ))}
             </div>
           ) : products.length === 0 ? (
@@ -147,17 +154,12 @@ export default function HomePage() {
               <p className="text-sm">商品がありません</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="flex gap-4 overflow-x-auto pb-2 -mx-6 px-6 lg:-mx-10 lg:px-10 scrollbar-hide">
               {products.slice(0, 8).map(({ product, store }) => (
-                <div key={`${store.id}-${product.productId}`}>
-                  {/* モバイル: 同一タブ遷移 */}
-                  <Link
-                    href={`/search/${store.id}/${product.productId}`}
-                    className="lg:hidden block"
-                  >
+                <div key={`${store.id}-${product.productId}`} className="flex-shrink-0 w-36 lg:w-44">
+                  <Link href={`/search/${store.id}/${product.productId}`} className="lg:hidden block">
                     <ProductCard product={product} store={store} />
                   </Link>
-                  {/* デスクトップ: 新しいタブで開く */}
                   <Link
                     href={`/search/${store.id}/${product.productId}`}
                     target="_blank"
