@@ -8,6 +8,7 @@ import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
 const CARD_W = 540
 const CARD_H = 720
 const FONT = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif'
+const LP_URL = 'https://uchinoko-lp.vercel.app/'
 
 type Props = {
   dog: Dog
@@ -18,8 +19,10 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   const card1Ref = useRef<HTMLDivElement>(null)
   const card2Ref = useRef<HTMLDivElement>(null)
   const card3Ref = useRef<HTMLDivElement>(null)
+  const card4Ref = useRef<HTMLDivElement>(null)
 
   const [photoSrc, setPhotoSrc] = useState<string>('')
+  const [qrSrc, setQrSrc] = useState<string>('')
   const [cardUrls, setCardUrls] = useState<string[]>([])
   const [cardFiles, setCardFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,7 +40,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   const breedInfo = getBreedDescription(dog.breed)
   const diffParagraphs = (dog.difficultyDescription ?? '').split('\n\n').filter(Boolean)
 
-  // Step1: 犬の写真を base64 に変換
+  // Step1a: 犬の写真を base64 に変換
   useEffect(() => {
     if (!dog.photoUrl) { setPhotoSrc(''); return }
     fetch(`/api/image-proxy?url=${encodeURIComponent(dog.photoUrl)}`)
@@ -52,8 +55,17 @@ export function ShareCardsModal({ dog, onClose }: Props) {
       .catch(() => setPhotoSrc(''))
   }, [dog.photoUrl])
 
-  // Step2: 写真の準備ができたらカード生成（バックグラウンド）
-  const photoReady = !dog.photoUrl || photoSrc !== ''
+  // Step1b: QRコード生成
+  useEffect(() => {
+    import('qrcode').then((QRCode) => {
+      QRCode.toDataURL(LP_URL, { width: 300, margin: 2, color: { dark: '#1f2937', light: '#ffffff' } })
+        .then(setQrSrc)
+        .catch(() => setQrSrc(''))
+    })
+  }, [])
+
+  // Step2: 写真とQRの準備ができたらカード生成（バックグラウンド）
+  const photoReady = (!dog.photoUrl || photoSrc !== '') && qrSrc !== ''
 
   const generateCards = useCallback(async () => {
     setLoading(true)
@@ -61,7 +73,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
       // DOM が描画されるのを待つ
       await new Promise((r) => setTimeout(r, 300))
       const html2canvas = (await import('html2canvas')).default
-      const refs = [card1Ref, card2Ref, card3Ref]
+      const refs = [card1Ref, card2Ref, card3Ref, card4Ref]
       const urls: string[] = []
       const files: File[] = []
 
@@ -206,7 +218,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
             {sharing ? (
               <><Loader2 size={16} className="animate-spin" />シェア中...</>
             ) : (
-              <><Share2 size={16} />3枚まとめてシェア・保存</>
+              <><Share2 size={16} />4枚まとめてシェア・保存</>
             )}
           </button>
         </div>
@@ -329,6 +341,32 @@ export function ShareCardsModal({ dog, onClose }: Props) {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* CARD 4: QR / LP */}
+        <div ref={card4Ref} style={{ ...baseCard, background: 'linear-gradient(145deg, #FF8F0D 0%, #f97316 40%, #ea580c 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 48px' }}>
+          {/* ロゴ・タイトル */}
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <p style={{ fontSize: 28, fontWeight: 800, color: 'white', margin: 0, letterSpacing: '0.04em' }}>ウチの子</p>
+            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', margin: '8px 0 0', fontWeight: 500 }}>愛犬のすべてをここに</p>
+          </div>
+
+          {/* QRコード */}
+          <div style={{ backgroundColor: 'white', borderRadius: 24, padding: 20, boxShadow: '0 8px 40px rgba(0,0,0,0.2)', marginBottom: 32 }}>
+            {qrSrc && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrSrc} alt="QR" style={{ width: 220, height: 220, display: 'block' }} />
+            )}
+          </div>
+
+          {/* 説明 */}
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 20, fontWeight: 700, color: 'white', margin: '0 0 10px' }}>QRコードを読み取って</p>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.7 }}>iOS アプリ・Webアプリ<br />どちらでもご利用いただけます</p>
+          </div>
+
+          {/* URL */}
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', margin: '32px 0 0', letterSpacing: '0.02em' }}>{LP_URL}</p>
         </div>
 
       </div>
