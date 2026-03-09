@@ -266,6 +266,11 @@ export default function UchinokoDetailPage() {
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-3xl">📔</div>
                           )}
+                          {diary.createdBy?.type === 'shop' && (
+                            <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              {diary.createdBy.name}
+                            </span>
+                          )}
                         </div>
                         <div className="p-2">
                           <p className="text-xs text-gray-500 line-clamp-2">{diary.comment}</p>

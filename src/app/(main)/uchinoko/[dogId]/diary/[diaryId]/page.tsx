@@ -77,12 +77,19 @@ export default function DiaryDetailPage() {
             戻る
           </button>
           <h1 className="text-base font-bold text-gray-800">日記</h1>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-gray-400 hover:text-red-400 transition-colors"
-          >
-            <Trash2 size={18} />
-          </button>
+          {(!diary?.createdBy || diary.createdBy.type === 'owner') && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+            >
+              <Trash2 size={18} />
+            </button>
+          )}
+          {diary?.createdBy?.type === 'shop' && (
+            <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+              {diary.createdBy.name}
+            </span>
+          )}
         </div>
 
         <div className="px-5 py-5 space-y-5">

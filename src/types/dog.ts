@@ -38,6 +38,12 @@ export interface Dog {
   createdAt: Date
 }
 
+export interface DiaryCreatedBy {
+  type: 'owner' | 'shop'
+  id: string             // shopId or ownerId
+  name: string           // 店舗名 or 飼い主名
+}
+
 export interface Diary {
   id?: string
   dogId: string
@@ -45,6 +51,7 @@ export interface Diary {
   photos: string[]       // 最大3枚
   comment: string
   createdAt: Date
+  createdBy?: DiaryCreatedBy  // 未設定の場合は飼い主の投稿とみなす
 }
 
 export interface HealthRecord {
