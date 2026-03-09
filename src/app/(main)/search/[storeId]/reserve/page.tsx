@@ -7,6 +7,24 @@ import {
   doc, getDoc, collection, getDocs, query,
   where, addDoc, serverTimestamp,
 } from 'firebase/firestore'
+
+// 定員を取得（日別 → 月別 → デフォルト3）
+async function getEffectiveCapacity(storeId: string, dateStr: string): Promise<number> {
+  const monthStr = dateStr.slice(0, 7) // "YYYY-MM"
+  const [dailySnap, monthlySnap] = await Promise.all([
+    getDoc(doc(db, 'shops', storeId, 'dailyCapacities', dateStr)),
+    getDoc(doc(db, 'shops', storeId, 'monthlyCapacities', monthStr)),
+  ])
+  if (dailySnap.exists()) {
+    const v = (dailySnap.data() as { capacity?: number }).capacity
+    if (typeof v === 'number') return v
+  }
+  if (monthlySnap.exists()) {
+    const v = (monthlySnap.data() as { capacity?: number }).capacity
+    if (typeof v === 'number') return v
+  }
+  return 3
+}
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
@@ -65,6 +83,7 @@ export default function ReservationPage() {
   // 時間帯状態
   const [timeSlots, setTimeSlots] = useState<string[]>([])
   const [slotCounts, setSlotCounts] = useState<Record<string, number>>({})
+  const [capacity, setCapacity] = useState(3)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null)
 
@@ -126,16 +145,20 @@ export default function ReservationPage() {
       setDayStatus('open')
       setTimeSlots(slots)
 
-      // その日の予約済みスロット数を取得
+      // 定員 & 予約済みスロット数を並行取得
       const dateStr = selectedDate.toISOString().split('T')[0]
-      const resSnap = await getDocs(
-        query(
-          collection(db, 'reservations'),
-          where('storeId', '==', storeId),
-          where('dateStr', '==', dateStr),
-          where('status', 'in', ['confirmed', 'completed']),
-        )
-      )
+      const [cap, resSnap] = await Promise.all([
+        getEffectiveCapacity(storeId, dateStr),
+        getDocs(
+          query(
+            collection(db, 'reservations'),
+            where('storeId', '==', storeId),
+            where('dateStr', '==', dateStr),
+            where('status', 'in', ['confirmed', 'completed']),
+          )
+        ),
+      ])
+      setCapacity(cap)
       const counts: Record<string, number> = {}
       for (const d of resSnap.docs) {
         const ts = (d.data() as { timeSlot?: string }).timeSlot
@@ -415,7 +438,7 @@ export default function ReservationPage() {
               <div className="flex flex-wrap gap-2">
                 {timeSlots.map((slot) => {
                   const count = slotCounts[slot] ?? 0
-                  const full = count >= 3
+                  const full = count >= capacity
                   return (
                     <button
                       key={slot}

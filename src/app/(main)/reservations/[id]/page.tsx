@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { loadStripe } from '@stripe/stripe-js'
 import {
@@ -11,7 +11,7 @@ import {
 import { db, app } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Reservation } from '@/types/reservation'
-import { ArrowLeft, Check, Calendar, Scissors, Dog, CreditCard } from 'lucide-react'
+import { ArrowLeft, Check, Calendar, Scissors, Dog, CreditCard, X } from 'lucide-react'
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
@@ -44,6 +44,8 @@ export default function ReservationDetailPage() {
   const [loadingPayment, setLoadingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(searchParams.get('payment') === 'success')
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   // Firestore リアルタイム監視
   useEffect(() => {
@@ -82,6 +84,22 @@ export default function ReservationDetailPage() {
     }
   }
 
+  const handleCancel = async () => {
+    if (!reservation) return
+    setCancelling(true)
+    try {
+      await updateDoc(doc(db, 'reservations', id), {
+        status: 'cancelled',
+        updatedAt: new Date(),
+      })
+      setShowCancelConfirm(false)
+    } catch {
+      // onSnapshot でリアルタイム更新されるのでエラー表示は省略
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -106,6 +124,9 @@ export default function ReservationDetailPage() {
     !isPaid &&
     !!reservation.servicePrice &&
     reservation.servicePrice > 0
+  // キャンセル可能かどうか（pending or confirmed、未払い）
+  const canCancel =
+    (reservation.status === 'pending' || reservation.status === 'confirmed') && !isPaid
 
   // selectedDate を Date オブジェクトに変換
   const reservationDate = reservation.selectedDate
@@ -177,6 +198,16 @@ export default function ReservationDetailPage() {
           </div>
         </div>
 
+        {/* キャンセルボタン */}
+        {canCancel && (
+          <button
+            onClick={() => setShowCancelConfirm(true)}
+            className="w-full py-3 border border-gray-200 rounded-xl text-sm text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+          >
+            予約をキャンセルする
+          </button>
+        )}
+
         {/* エラー */}
         {paymentError && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -207,7 +238,7 @@ export default function ReservationDetailPage() {
 
       {/* 固定支払いボタン（支払い前のみ） */}
       {needsPayment && !clientSecret && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 px-5 py-4 z-20">
+        <div className="fixed bottom-20 lg:bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 px-5 py-4 z-40">
           <div className="max-w-xl mx-auto">
             <button
               onClick={handleStartPayment}
@@ -223,6 +254,38 @@ export default function ReservationDetailPage() {
                 ? '準備中...'
                 : `支払う · ¥${reservation.servicePrice?.toLocaleString()}`}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* キャンセル確認モーダル */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end lg:items-center justify-center px-5 pb-8 lg:pb-0">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900">予約をキャンセルしますか？</h3>
+              <button onClick={() => setShowCancelConfirm(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                <X size={18} className="text-gray-400" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">
+              キャンセルすると元に戻せません。{reservation.shopName}への予約をキャンセルします。
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                戻る
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-50"
+              >
+                {cancelling ? 'キャンセル中...' : 'キャンセルする'}
+              </button>
+            </div>
           </div>
         </div>
       )}
