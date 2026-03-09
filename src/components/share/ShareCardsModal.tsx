@@ -347,12 +347,12 @@ export function ShareCardsModal({ dog, onClose }: Props) {
         <div ref={card4Ref} style={{ ...baseCard, background: 'linear-gradient(145deg, #FF8F0D 0%, #f97316 40%, #ea580c 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 48px' }}>
           {/* ロゴ・タイトル */}
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <p style={{ fontSize: 28, fontWeight: 800, color: 'white', margin: 0, letterSpacing: '0.04em' }}>ウチの子</p>
-            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', margin: '8px 0 0', fontWeight: 500 }}>愛犬のすべてをここに</p>
+            <p style={{ fontSize: 36, fontWeight: 800, color: 'white', margin: 0, letterSpacing: '0.04em' }}>ウチの子</p>
+            <p style={{ fontSize: 20, color: 'rgba(255,255,255,0.85)', margin: '10px 0 0', fontWeight: 500 }}>愛犬のすべてをここに</p>
           </div>
 
           {/* QRコード */}
-          <div style={{ backgroundColor: 'white', borderRadius: 24, padding: 20, boxShadow: '0 8px 40px rgba(0,0,0,0.2)', marginBottom: 32 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: 24, padding: 20, boxShadow: '0 8px 40px rgba(0,0,0,0.2)', marginBottom: 36 }}>
             {qrSrc && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={qrSrc} alt="QR" style={{ width: 220, height: 220, display: 'block' }} />
@@ -361,12 +361,10 @@ export function ShareCardsModal({ dog, onClose }: Props) {
 
           {/* 説明 */}
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 20, fontWeight: 700, color: 'white', margin: '0 0 10px', lineHeight: 1.6 }}>QRコードを読み取って、<br />ウチの子診断スタート！</p>
-            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.7 }}>愛犬の実年齢がわかるよ！</p>
+            <p style={{ fontSize: 24, fontWeight: 700, color: 'white', margin: '0 0 12px', lineHeight: 1.6 }}>QRコードを読み取って、<br />ウチの子診断スタート！</p>
+            <p style={{ fontSize: 24, fontWeight: 700, color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.7 }}>愛犬の実年齢がわかるよ！</p>
           </div>
 
-          {/* URL */}
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', margin: '32px 0 0', letterSpacing: '0.02em' }}>{LP_URL}</p>
         </div>
 
       </div>
