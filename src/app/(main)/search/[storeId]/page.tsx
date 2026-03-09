@@ -6,17 +6,21 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { useAuth } from '@/contexts/AuthContext'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Store, StoreProduct, WeeklyOpenHours } from '@/types/store'
 import {
   MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight,
-  Package, Store as StoreIcon, Star, ArrowLeft,
+  Package, Store as StoreIcon, Star, ArrowLeft, CalendarPlus,
 } from 'lucide-react'
 
-type Tab = 'info' | 'products' | 'dogs'
+type Tab = 'info' | 'products' | 'pricing' | 'dogs'
 
 export default function StoreDetailPage() {
   const { storeId } = useParams<{ storeId: string }>()
   const router = useRouter()
+  const { user } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const [store, setStore] = useState<Store | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('info')
@@ -71,7 +75,8 @@ export default function StoreDetailPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'info', label: '基本情報' },
     ...(activeProducts.length > 0 ? [{ key: 'products' as Tab, label: '商品' }] : []),
-    { key: 'dogs', label: '来店犬' },
+    { key: 'pricing', label: '料金' },
+    { key: 'dogs', label: 'カルテ' },
   ]
 
   return (
@@ -174,10 +179,24 @@ export default function StoreDetailPage() {
       </div>
 
       {/* タブコンテンツ */}
-      <div className="px-6 lg:px-10 py-6 max-w-3xl mx-auto">
+      <div className="px-6 lg:px-10 py-6 pb-28 max-w-3xl mx-auto">
         {activeTab === 'info' && <InfoTab store={store} />}
         {activeTab === 'products' && <ProductsTab store={store} activeProducts={activeProducts} />}
-        {activeTab === 'dogs' && <VisitingDogsTab />}
+        {activeTab === 'pricing' && <PricingTab store={store} />}
+        {activeTab === 'dogs' && <KarteTab />}
+      </div>
+
+      {/* 固定予約ボタン */}
+      <div className="fixed bottom-20 lg:bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 px-5 py-4 z-40">
+        <div className="max-w-3xl mx-auto">
+          <button
+            onClick={() => user ? router.push(`/search/${storeId}/reserve`) : openAuthModal()}
+            className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-base transition-colors flex items-center justify-center gap-2"
+          >
+            <CalendarPlus size={18} />
+            予約する
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -241,32 +260,6 @@ function InfoTab({ store }: { store: Store }) {
         )}
       </div>
 
-      {/* サービス内容・料金 */}
-      {store.services && store.services.length > 0 && (
-        <div className="bg-white rounded-xl p-5 space-y-3">
-          <h3 className="text-sm font-bold text-gray-800">サービス内容・料金</h3>
-          <div className="space-y-3">
-            {store.services.map((service, i) => (
-              <div key={service.id ?? i} className="border border-gray-100 rounded-xl p-3">
-                <p className="text-sm font-semibold text-gray-800">{service.name}</p>
-                {service.description && (
-                  <p className="text-xs text-gray-500 mt-1">{service.description}</p>
-                )}
-                <div className="flex items-center justify-between mt-2">
-                  {service.duration && (
-                    <p className="text-xs text-gray-400">{service.duration}分</p>
-                  )}
-                  {service.price != null && (
-                    <p className="text-sm font-bold text-orange-500">
-                      ¥{service.price.toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -317,11 +310,44 @@ function ProductsTab({ store, activeProducts }: { store: Store; activeProducts: 
   )
 }
 
-// ── 来店犬タブ（大枠のみ・中身は今後実装） ────────────────────────────
-function VisitingDogsTab() {
+// ── 料金タブ ──────────────────────────────────────────────────────
+function PricingTab({ store }: { store: Store }) {
+  if (!store.services || store.services.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+        <p className="text-sm">料金情報はまだ登録されていません。</p>
+      </div>
+    )
+  }
+  return (
+    <div className="space-y-3">
+      {store.services.map((service, i) => (
+        <div key={service.id ?? i} className="bg-white rounded-xl p-4">
+          <p className="text-sm font-semibold text-gray-800">{service.name}</p>
+          {service.description && (
+            <p className="text-xs text-gray-500 mt-1">{service.description}</p>
+          )}
+          <div className="flex items-center justify-between mt-2">
+            {service.duration && (
+              <p className="text-xs text-gray-400">{service.duration}分</p>
+            )}
+            {service.price != null && (
+              <p className="text-sm font-bold text-orange-500">
+                ¥{service.price.toLocaleString()}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── カルテタブ（大枠のみ・中身は今後実装） ────────────────────────────
+function KarteTab() {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-      <p className="text-sm">来店した子の表示は現在準備中です。</p>
+      <p className="text-sm">カルテ機能は現在準備中です。</p>
     </div>
   )
 }

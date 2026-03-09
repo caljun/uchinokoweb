@@ -2,26 +2,48 @@ export interface PaymentInfo {
   paymentIntentId: string
   clientSecret: string
   amount: number
-  status: 'pending' | 'completed' | 'failed'
+  platformFee?: number
+  status: 'pending' | 'succeeded' | 'failed'
+  createdAt?: Date
+  completedAt?: Date
+}
+
+export interface DogInfo {
+  name: string
+  photoUrl?: string | null
+  breed?: string
+  breedSize?: number
 }
 
 export interface Reservation {
   id?: string
-  ownerId: string
-  dogId: string
-  shopId: string
+  // Firestore / iOS 準拠フィールド
+  userId: string
+  storeId: string
   shopName: string
+  dogId: string
   dogName: string
-  serviceType?: string
+  dogInfo?: DogInfo
+  serviceId?: string | null
   serviceName?: string
   servicePrice?: number
+  serviceType?: string        // "inStore" | "visit"
+  selectedDate?: string       // ISO8601 "2026-03-15T10:00:00+09:00"
+  dateStr?: string            // "2026-03-15"  for querying
+  timeSlot?: string           // "10:00"
+  requestedDates?: string[]
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  paymentStatus?: 'paid'
+  paymentInfo?: PaymentInfo
+  createdAt: Date | { toDate(): Date }
+  updatedAt?: Date | { toDate(): Date }
+  // Legacy fields
+  ownerId?: string
+  shopId?: string
   requestedDate?: Date
   confirmedDate?: Date
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
   message?: string
   shopMessage?: string
-  paymentInfo?: PaymentInfo
-  createdAt: Date
 }
 
 export interface Order {
