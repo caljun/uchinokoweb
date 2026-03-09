@@ -227,6 +227,7 @@ export default function ReservationPage() {
         serviceId: service.id ?? null,
         serviceName: service.name,
         servicePrice: service.price,
+        totalAmount: Math.round(service.price * 1.1), // 顧客支払額（手数料10%込み）
         serviceType: service.type ?? 'inStore',
         dateStr,
         timeSlot: selectedTimeSlot,
@@ -367,9 +368,12 @@ export default function ReservationPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <p className="text-sm font-bold text-orange-500">
-                        ¥{service.price.toLocaleString()}
-                      </p>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-orange-500">
+                          ¥{Math.round(service.price * 1.1).toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-400">手数料込み</p>
+                      </div>
                       {selectedServiceIndex === i && <Check size={14} className="text-orange-500" />}
                     </div>
                   </div>
@@ -509,7 +513,7 @@ export default function ReservationPage() {
             <p className="text-center text-xs text-gray-400 mt-2">
               {selectedDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}{' '}
               {selectedTimeSlot} · {store.services[selectedServiceIndex].name} ·{' '}
-              ¥{store.services[selectedServiceIndex].price.toLocaleString()}
+              ¥{Math.round(store.services[selectedServiceIndex].price * 1.1).toLocaleString()}（手数料込み）
             </p>
           )}
         </div>

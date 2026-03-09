@@ -26,7 +26,8 @@ export interface Reservation {
   dogInfo?: DogInfo
   serviceId?: string | null
   serviceName?: string
-  servicePrice?: number
+  servicePrice?: number       // 店の設定価格（店が受け取る金額）
+  totalAmount?: number        // 顧客支払額（servicePrice × 1.1、手数料込み）
   serviceType?: string        // "inStore" | "visit"
   selectedDate?: string       // ISO8601 "2026-03-15T10:00:00+09:00"
   dateStr?: string            // "2026-03-15"  for querying

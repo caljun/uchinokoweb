@@ -191,7 +191,11 @@ export default function ReservationDetailPage() {
               <DetailRow
                 icon={<CreditCard size={15} />}
                 label="料金"
-                value={`¥${reservation.servicePrice.toLocaleString()}`}
+                value={
+                  reservation.paymentInfo?.amount
+                    ? `¥${reservation.paymentInfo.amount.toLocaleString()}（手数料込み）`
+                    : `¥${Math.round(reservation.servicePrice * 1.1).toLocaleString()}（手数料込み）`
+                }
               />
             )}
           </div>
@@ -262,7 +266,7 @@ export default function ReservationDetailPage() {
               <CreditCard size={18} />
               {loadingPayment
                 ? '準備中...'
-                : `支払う · ¥${reservation.servicePrice?.toLocaleString()}`}
+                : `支払う · ¥${(reservation.paymentInfo?.amount ?? Math.round((reservation.servicePrice ?? 0) * 1.1)).toLocaleString()}`}
             </button>
           </div>
         </div>
