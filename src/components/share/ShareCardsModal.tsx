@@ -361,8 +361,8 @@ export function ShareCardsModal({ dog, onClose }: Props) {
 
           {/* 説明 */}
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 20, fontWeight: 700, color: 'white', margin: '0 0 10px' }}>QRコードを読み取って</p>
-            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.7 }}>iOS アプリ・Webアプリ<br />どちらでもご利用いただけます</p>
+            <p style={{ fontSize: 20, fontWeight: 700, color: 'white', margin: '0 0 10px', lineHeight: 1.6 }}>QRコードを読み取って、<br />ウチの子診断スタート！</p>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.7 }}>愛犬の実年齢がわかるよ！</p>
           </div>
 
           {/* URL */}
