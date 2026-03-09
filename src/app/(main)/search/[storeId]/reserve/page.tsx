@@ -8,19 +8,26 @@ import {
   where, addDoc, serverTimestamp,
 } from 'firebase/firestore'
 
-// 定員を取得（日別 → 月別 → デフォルト3）
-async function getEffectiveCapacity(storeId: string, dateStr: string): Promise<number> {
+// 定員を取得（日別 → 月別 → デフォルト3）serviceType別
+async function getEffectiveCapacity(
+  storeId: string,
+  dateStr: string,
+  serviceType: 'inStore' | 'visit' = 'inStore'
+): Promise<number> {
   const monthStr = dateStr.slice(0, 7) // "YYYY-MM"
+  const field = serviceType === 'visit' ? 'visitCapacity' : 'inStoreCapacity'
   const [dailySnap, monthlySnap] = await Promise.all([
     getDoc(doc(db, 'shops', storeId, 'dailyCapacities', dateStr)),
     getDoc(doc(db, 'shops', storeId, 'monthlyCapacities', monthStr)),
   ])
   if (dailySnap.exists()) {
-    const v = (dailySnap.data() as { capacity?: number }).capacity
+    const data = dailySnap.data() as Record<string, number>
+    const v = data[field] ?? data['capacity']
     if (typeof v === 'number') return v
   }
   if (monthlySnap.exists()) {
-    const v = (monthlySnap.data() as { capacity?: number }).capacity
+    const data = monthlySnap.data() as Record<string, number>
+    const v = data[field] ?? data['capacity']
     if (typeof v === 'number') return v
   }
   return 3
@@ -59,7 +66,7 @@ type DayStatus = 'open' | 'holiday' | 'no-hours'
 export default function ReservationPage() {
   const { storeId } = useParams<{ storeId: string }>()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, owner } = useAuth()
   const { openAuthModal } = useAuthModal()
 
   const [store, setStore] = useState<Store | null>(null)
@@ -110,7 +117,7 @@ export default function ReservationPage() {
     load().catch(() => setLoading(false))
   }, [storeId, user])
 
-  // 日付選択 → 時間帯を生成 & 定員チェック
+  // 日付・サービス選択 → 時間帯を生成 & 定員チェック
   useEffect(() => {
     if (!selectedDate || !store) return
     setSelectedTimeSlot(null)
@@ -145,15 +152,22 @@ export default function ReservationPage() {
       setDayStatus('open')
       setTimeSlots(slots)
 
-      // 定員 & 予約済みスロット数を並行取得
+      // 選択中サービスの種別で定員を分離
+      const service = selectedServiceIndex !== null && store.services
+        ? store.services[selectedServiceIndex]
+        : null
+      const serviceType: 'inStore' | 'visit' = service?.type === 'visit' ? 'visit' : 'inStore'
+
+      // 定員 & 予約済みスロット数を並行取得（同種別のみカウント）
       const dateStr = selectedDate.toISOString().split('T')[0]
       const [cap, resSnap] = await Promise.all([
-        getEffectiveCapacity(storeId, dateStr),
+        getEffectiveCapacity(storeId, dateStr, serviceType),
         getDocs(
           query(
             collection(db, 'reservations'),
             where('storeId', '==', storeId),
             where('dateStr', '==', dateStr),
+            where('serviceType', '==', serviceType),
             where('status', 'in', ['confirmed', 'completed']),
           )
         ),
@@ -169,7 +183,7 @@ export default function ReservationPage() {
     }
 
     loadSlots().catch(() => setLoadingSlots(false))
-  }, [selectedDate, store, storeId])
+  }, [selectedDate, store, storeId, selectedServiceIndex])
 
   const handleSubmit = async () => {
     if (!user || !store || !selectedDogId || selectedServiceIndex === null || !selectedDate || !selectedTimeSlot) return
@@ -178,10 +192,18 @@ export default function ReservationPage() {
       const dog = dogs.find((d) => d.id === selectedDogId)!
       const service = store.services![selectedServiceIndex]
       const dateStr = selectedDate.toISOString().split('T')[0]
+
+      // JST (+09:00) の ISO8601 文字列を生成（uchinokotempo / iOS と形式を統一）
       const [h, m] = selectedTimeSlot.split(':').map(Number)
       const dt = new Date(selectedDate)
       dt.setHours(h, m, 0, 0)
-      const selectedDateISO = dt.toISOString()
+      const offsetMs = 9 * 60 * 60 * 1000
+      const jstMs = dt.getTime() + offsetMs
+      const jstDate = new Date(jstMs)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const selectedDateISO =
+        `${jstDate.getUTCFullYear()}-${pad(jstDate.getUTCMonth() + 1)}-${pad(jstDate.getUTCDate())}` +
+        `T${pad(jstDate.getUTCHours())}:${pad(jstDate.getUTCMinutes())}:00+09:00`
 
       const docRef = await addDoc(collection(db, 'reservations'), {
         storeId,
@@ -194,6 +216,12 @@ export default function ReservationPage() {
           photoUrl: dog.photoUrl ?? null,
           breed: dog.breed,
           breedSize: dog.breedSize,
+        },
+        // Webhook が visitingDogs に書き込む際に参照する
+        ownerInfo: {
+          name: owner?.name ?? owner?.displayName ?? null,
+          email: owner?.email ?? null,
+          phone: owner?.phone ?? null,
         },
         serviceId: service.id ?? null,
         serviceName: service.name,
