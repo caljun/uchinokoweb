@@ -9,7 +9,7 @@ import { Dog, Diary, HealthRecord } from '@/types/dog'
 import { ArrowLeft, BookOpen, Heart } from 'lucide-react'
 import { getBreedDescription, getAgeDisplayText, BreedInfo } from '@/lib/diagnosis'
 
-type Tab = 'detail' | 'diary' | 'health'
+type Tab = 'detail' | 'gallery' | 'health'
 
 const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
   リーダータイプ: '知恵があり勇敢なまとめ役タイプ。人の役に立ちたいと思っています。',
@@ -50,7 +50,6 @@ export default function PublicDogProfilePage() {
       const snap = await getDoc(doc(db, 'owners', ownerId, 'dogs', dogId))
       if (!snap.exists()) { setNotFound(true); setLoading(false); return }
       const data = { id: snap.id, ...snap.data() } as Dog
-      if (!data.isPublic) { setNotFound(true); setLoading(false); return }
       setDog(data)
 
       await Promise.allSettled([
@@ -94,7 +93,7 @@ export default function PublicDogProfilePage() {
         <div className="flex justify-center gap-12">
           {([
             { key: 'detail' as Tab, label: '詳細' },
-            { key: 'diary' as Tab, label: '日記' },
+            { key: 'gallery' as Tab, label: 'ギャラリー' },
             { key: 'health' as Tab, label: '健康' },
           ]).map(({ key, label }) => (
             <button
@@ -210,41 +209,24 @@ export default function PublicDogProfilePage() {
           </>
         )}
 
-        {/* ── 日記タブ（2列 3:4グリッド） ── */}
-        {activeTab === 'diary' && (
-          diaries.length === 0 ? (
+        {/* ── ギャラリータブ（2列 3:4グリッド） ── */}
+        {activeTab === 'gallery' && (() => {
+          const photos = diaries.flatMap(d => (d.photos ?? []).map(url => ({ url, createdAt: d.createdAt })))
+          return photos.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
               <BookOpen size={36} strokeWidth={1.5} />
-              <p className="text-sm">日記はまだありません</p>
+              <p className="text-sm">まだ写真がありません</p>
             </div>
           ) : (
             <div className="max-w-lg mx-auto px-5 pt-5 grid grid-cols-2 gap-3">
-              {diaries.map((diary) => {
-                const date = toDate(diary.createdAt)
-                const photo = diary.photos?.[0]
-                return (
-                  <div key={diary.id} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
-                    {photo ? (
-                      <Image src={photo} alt="日記" fill className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl bg-orange-50">📝</div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                      {date && (
-                        <p className="text-white/70 text-[10px] mb-1">
-                          {date.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}
-                        </p>
-                      )}
-                      {diary.comment && (
-                        <p className="text-white text-xs leading-tight line-clamp-2">{diary.comment}</p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+              {photos.map((p, i) => (
+                <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
+                  <Image src={p.url} alt="ギャラリー" fill className="object-cover" />
+                </div>
+              ))}
             </div>
           )
-        )}
+        })()}
 
         {/* ── 健康タブ ── */}
         {activeTab === 'health' && (

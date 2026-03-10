@@ -24,6 +24,7 @@ export default function RankingPage() {
   const { user } = useAuth()
   const [entries, setEntries] = useState<RankDog[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetch = async () => {
@@ -51,8 +52,9 @@ export default function RankingPage() {
           }
         })
         setEntries(data)
-      } catch {
-        // インデックス未作成時などはエラーを無視
+      } catch (e) {
+        console.error('Ranking query error:', e)
+        setError(e instanceof Error ? e.message : String(e))
       } finally {
         setLoading(false)
       }
@@ -88,6 +90,11 @@ export default function RankingPage() {
                 <div className="h-5 w-12 bg-gray-200 rounded" />
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-2 text-red-400">
+            <p className="text-sm font-bold">エラーが発生しました</p>
+            <p className="text-xs text-center break-all">{error}</p>
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-gray-400">
