@@ -5,11 +5,11 @@ import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { doc, getDoc, collection, query, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { Dog, Diary } from '@/types/dog'
-import { ArrowLeft, BookOpen } from 'lucide-react'
+import { Dog, Diary, HealthRecord } from '@/types/dog'
+import { ArrowLeft, BookOpen, Heart } from 'lucide-react'
 import { getBreedDescription, getAgeDisplayText, BreedInfo } from '@/lib/diagnosis'
 
-type Tab = 'info' | 'diary'
+type Tab = 'detail' | 'diary' | 'health'
 
 const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
   リーダータイプ: '知恵があり勇敢なまとめ役タイプ。人の役に立ちたいと思っています。',
@@ -18,14 +18,31 @@ const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
   守られタイプ: '特定の人になつきやすく、甘えん坊なタイプ。安心できる環境が大切です。',
 }
 
+const CONDITION_COLORS: Record<string, string> = {
+  '元気': 'text-green-600 bg-green-50',
+  '普通': 'text-blue-600 bg-blue-50',
+  'ちょっと心配': 'text-orange-600 bg-orange-50',
+  'しんどい': 'text-red-600 bg-red-50',
+}
+
+function toDate(v: unknown): Date | null {
+  if (!v) return null
+  if (typeof (v as { toDate?: () => Date }).toDate === 'function') {
+    return (v as { toDate: () => Date }).toDate()
+  }
+  const d = new Date(v as string)
+  return isNaN(d.getTime()) ? null : d
+}
+
 export default function PublicDogProfilePage() {
   const { ownerId, dogId } = useParams<{ ownerId: string; dogId: string }>()
   const router = useRouter()
   const [dog, setDog] = useState<Dog | null>(null)
   const [diaries, setDiaries] = useState<Diary[]>([])
+  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [activeTab, setActiveTab] = useState<Tab>('info')
+  const [activeTab, setActiveTab] = useState<Tab>('detail')
 
   useEffect(() => {
     if (!ownerId || !dogId) return
@@ -36,15 +53,12 @@ export default function PublicDogProfilePage() {
       if (!data.isPublic) { setNotFound(true); setLoading(false); return }
       setDog(data)
 
-      // 日記を取得（アクセス不可なら無視）
-      try {
-        const diarySnap = await getDocs(
-          query(collection(db, 'owners', ownerId, 'dogs', dogId, 'diaries'), orderBy('createdAt', 'desc'))
-        )
-        setDiaries(diarySnap.docs.map(d => ({ id: d.id, ...d.data() } as Diary)))
-      } catch {
-        // Firestore rules でブロックされた場合はスキップ
-      }
+      await Promise.allSettled([
+        getDocs(query(collection(db, 'owners', ownerId, 'dogs', dogId, 'diaries'), orderBy('createdAt', 'desc')))
+          .then(s => setDiaries(s.docs.map(d => ({ id: d.id, ...d.data() } as Diary)))),
+        getDocs(query(collection(db, 'owners', ownerId, 'dogs', dogId, 'healthRecords'), orderBy('recordDate', 'desc')))
+          .then(s => setHealthRecords(s.docs.map(d => ({ id: d.id, ...d.data() } as HealthRecord)))),
+      ])
       setLoading(false)
     }
     load().catch(() => { setNotFound(true); setLoading(false) })
@@ -75,30 +89,13 @@ export default function PublicDogProfilePage() {
         <h1 className="font-bold text-gray-900">{dog.name}</h1>
       </div>
 
-      {/* 写真 */}
-      <div className="relative aspect-[3/4] max-h-[480px] bg-gray-100 overflow-hidden">
-        {dog.photoUrl ? (
-          <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-7xl">🐶</div>
-        )}
-        {/* 名前オーバーレイ */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-5 pb-5 pt-12">
-          <p className="text-white text-2xl font-bold">{dog.name}</p>
-          <div className="flex flex-wrap gap-2 mt-1.5">
-            {dog.breed && <span className="text-white/90 text-xs">{dog.breed}</span>}
-            {ageText && <span className="text-white/70 text-xs">· {ageText}</span>}
-            {dog.gender && <span className="text-white/70 text-xs">· {dog.gender}</span>}
-          </div>
-        </div>
-      </div>
-
       {/* タブ */}
       <div className="bg-white border-b border-gray-200 px-6 sticky top-16 z-10">
-        <div className="flex gap-8">
+        <div className="flex justify-center gap-12">
           {([
-            { key: 'info' as Tab, label: '詳細' },
+            { key: 'detail' as Tab, label: '詳細' },
             { key: 'diary' as Tab, label: '日記' },
+            { key: 'health' as Tab, label: '健康' },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -115,42 +112,47 @@ export default function PublicDogProfilePage() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-5 py-5 space-y-4">
-        {/* 詳細タブ */}
-        {activeTab === 'info' && (
+      <div className="pb-8">
+
+        {/* ── 詳細タブ ── */}
+        {activeTab === 'detail' && (
           <>
-            {/* 基本情報グリッド */}
+            {/* 写真 - フル幅 */}
+            <div className="relative aspect-[3/4] bg-gray-100 overflow-hidden">
+              {dog.photoUrl ? (
+                <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-7xl">🐶</div>
+              )}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-5 pb-5 pt-12">
+                <p className="text-white text-2xl font-bold">{dog.name}</p>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {dog.breed && <span className="text-white/90 text-xs">{dog.breed}</span>}
+                  {ageText && <span className="text-white/70 text-xs">· {ageText}</span>}
+                  {dog.gender && <span className="text-white/70 text-xs">· {dog.gender}</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="max-w-lg mx-auto px-5 pt-5 space-y-4">
             <div className="bg-white rounded-2xl p-5">
               <p className="text-xs text-gray-400 font-medium mb-3">基本情報</p>
               <div className="grid grid-cols-2 gap-y-3">
                 {dog.breed && (
-                  <div>
-                    <p className="text-xs text-gray-400">犬種</p>
-                    <p className="text-sm font-medium text-gray-800 mt-0.5">{dog.breed}</p>
-                  </div>
+                  <div><p className="text-xs text-gray-400">犬種</p><p className="text-sm font-medium text-gray-800 mt-0.5">{dog.breed}</p></div>
                 )}
                 {ageText && (
-                  <div>
-                    <p className="text-xs text-gray-400">年齢</p>
-                    <p className="text-sm font-medium text-gray-800 mt-0.5">{ageText}</p>
-                  </div>
+                  <div><p className="text-xs text-gray-400">年齢</p><p className="text-sm font-medium text-gray-800 mt-0.5">{ageText}</p></div>
                 )}
                 {dog.gender && (
-                  <div>
-                    <p className="text-xs text-gray-400">性別</p>
-                    <p className="text-sm font-medium text-gray-800 mt-0.5">{dog.gender}</p>
-                  </div>
+                  <div><p className="text-xs text-gray-400">性別</p><p className="text-sm font-medium text-gray-800 mt-0.5">{dog.gender}</p></div>
                 )}
                 {dog.weight != null && (
-                  <div>
-                    <p className="text-xs text-gray-400">体重</p>
-                    <p className="text-sm font-medium text-gray-800 mt-0.5">{dog.weight} kg</p>
-                  </div>
+                  <div><p className="text-xs text-gray-400">体重</p><p className="text-sm font-medium text-gray-800 mt-0.5">{dog.weight} kg</p></div>
                 )}
               </div>
             </div>
 
-            {/* 性格タイプ */}
             {dog.temperamentType && (
               <div className="bg-white rounded-2xl p-5">
                 <p className="text-xs text-gray-400 font-medium mb-2">性格タイプ</p>
@@ -165,7 +167,6 @@ export default function PublicDogProfilePage() {
               </div>
             )}
 
-            {/* 犬種詳細 */}
             {breedInfo && (
               <div className="bg-white rounded-2xl p-5 space-y-3">
                 <p className="text-xs text-gray-400 font-medium">犬種詳細</p>
@@ -194,22 +195,22 @@ export default function PublicDogProfilePage() {
                   </div>
                 )}
                 {breedInfo.chip && (
-                  <p className="text-sm text-gray-500 leading-relaxed pt-1 border-t border-gray-100">{breedInfo.chip}</p>
+                  <p className="text-sm text-gray-500 leading-relaxed pt-2 border-t border-gray-100">{breedInfo.chip}</p>
                 )}
               </div>
             )}
 
-            {/* 難易度説明 */}
             {dog.difficultyDescription && (
               <div className="bg-white rounded-2xl p-5">
                 <p className="text-xs text-gray-400 font-medium mb-2">しつけについて</p>
                 <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{dog.difficultyDescription}</p>
               </div>
             )}
+            </div>{/* /px-5 */}
           </>
         )}
 
-        {/* 日記タブ */}
+        {/* ── 日記タブ（2列 3:4グリッド） ── */}
         {activeTab === 'diary' && (
           diaries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
@@ -217,33 +218,25 @@ export default function PublicDogProfilePage() {
               <p className="text-sm">日記はまだありません</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="max-w-lg mx-auto px-5 pt-5 grid grid-cols-2 gap-3">
               {diaries.map((diary) => {
-                const date = diary.createdAt
-                  ? (typeof (diary.createdAt as unknown as { toDate?: () => Date }).toDate === 'function'
-                    ? (diary.createdAt as unknown as { toDate: () => Date }).toDate()
-                    : new Date(diary.createdAt as unknown as string))
-                  : null
+                const date = toDate(diary.createdAt)
+                const photo = diary.photos?.[0]
                 return (
-                  <div key={diary.id} className="bg-white rounded-2xl overflow-hidden">
-                    {diary.photos && diary.photos.length > 0 && (
-                      <div className="relative aspect-video w-full bg-gray-100">
-                        <Image src={diary.photos[0]} alt="日記" fill className="object-cover" />
-                      </div>
+                  <div key={diary.id} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
+                    {photo ? (
+                      <Image src={photo} alt="日記" fill className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl bg-orange-50">📝</div>
                     )}
-                    <div className="p-4">
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
                       {date && (
-                        <p className="text-xs text-gray-400 mb-2">
-                          {date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        <p className="text-white/70 text-[10px] mb-1">
+                          {date.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}
                         </p>
                       )}
                       {diary.comment && (
-                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{diary.comment}</p>
-                      )}
-                      {diary.createdBy && (
-                        <p className="text-xs text-gray-400 mt-2">
-                          {diary.createdBy.type === 'shop' ? `📍 ${diary.createdBy.name}` : `👤 ${diary.createdBy.name}`}
-                        </p>
+                        <p className="text-white text-xs leading-tight line-clamp-2">{diary.comment}</p>
                       )}
                     </div>
                   </div>
@@ -252,6 +245,46 @@ export default function PublicDogProfilePage() {
             </div>
           )
         )}
+
+        {/* ── 健康タブ ── */}
+        {activeTab === 'health' && (
+          healthRecords.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+              <Heart size={36} strokeWidth={1.5} />
+              <p className="text-sm">健康記録はまだありません</p>
+            </div>
+          ) : (
+            <div className="max-w-lg mx-auto px-5 pt-5 space-y-3">
+              {healthRecords.map((rec) => {
+                const date = toDate(rec.recordDate)
+                return (
+                  <div key={rec.id} className="bg-white rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      {date && (
+                        <p className="text-sm font-medium text-gray-800">
+                          {date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                      )}
+                      {rec.condition && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CONDITION_COLORS[rec.condition] ?? 'text-gray-500 bg-gray-100'}`}>
+                          {rec.condition}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                      {rec.weight != null && <span>体重 <strong>{rec.weight} kg</strong></span>}
+                      {rec.appetite && <span>食欲 <strong>{rec.appetite}</strong></span>}
+                    </div>
+                    {rec.note && (
+                      <p className="text-sm text-gray-500 mt-2 leading-relaxed">{rec.note}</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        )}
+
       </div>
     </div>
   )
