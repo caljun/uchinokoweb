@@ -259,21 +259,21 @@ export default function UchinokoDetailPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {diaries.map((diary) => (
                     <Link key={diary.id} href={`/uchinoko/${dogId}/diary/${diary.id}`}>
-                      <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
-                        <div className="w-full h-28 bg-gray-100 relative">
-                          {diary.photos?.[0] ? (
-                            <Image src={diary.photos[0]} alt="diary" fill className="object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-3xl">📔</div>
+                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100">
+                        {diary.photos?.[0] ? (
+                          <Image src={diary.photos[0]} alt="diary" fill className="object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-3xl bg-orange-50">📔</div>
+                        )}
+                        {diary.createdBy?.type === 'shop' && (
+                          <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {diary.createdBy.name}
+                          </span>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                          {diary.comment && (
+                            <p className="text-white text-xs leading-tight line-clamp-2">{diary.comment}</p>
                           )}
-                          {diary.createdBy?.type === 'shop' && (
-                            <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                              {diary.createdBy.name}
-                            </span>
-                          )}
-                        </div>
-                        <div className="p-2">
-                          <p className="text-xs text-gray-500 line-clamp-2">{diary.comment}</p>
                         </div>
                       </div>
                     </Link>
