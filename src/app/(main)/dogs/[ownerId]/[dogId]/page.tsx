@@ -75,7 +75,7 @@ export default function PublicDogProfilePage() {
     )
   }
 
-  const ageText = dog.birthDate ? getAgeDisplayText(dog.birthDate) : null
+  const ageText = dog.birthDate ? getAgeDisplayText(dog.birthDate, dog.breedSize) : null
   const breedInfo: BreedInfo | null = dog.breed ? getBreedDescription(dog.breed) : null
   const tempDesc = dog.temperamentType ? TEMPERAMENT_DESCRIPTIONS[dog.temperamentType] : null
 
