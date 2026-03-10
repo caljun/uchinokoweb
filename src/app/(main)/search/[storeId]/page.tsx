@@ -12,6 +12,7 @@ import { Store, StoreProduct, WeeklyOpenHours } from '@/types/store'
 import {
   MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight,
   Package, Store as StoreIcon, Star, ArrowLeft, CalendarPlus,
+  Dog,
 } from 'lucide-react'
 
 type Tab = 'info' | 'products' | 'pricing' | 'dogs'
@@ -76,7 +77,7 @@ export default function StoreDetailPage() {
     { key: 'info', label: '基本情報' },
     ...(activeProducts.length > 0 ? [{ key: 'products' as Tab, label: '商品' }] : []),
     { key: 'pricing', label: '料金' },
-    { key: 'dogs', label: 'カルテ' },
+    { key: 'dogs', label: '来店した子' },
   ]
 
   return (
@@ -183,7 +184,7 @@ export default function StoreDetailPage() {
         {activeTab === 'info' && <InfoTab store={store} />}
         {activeTab === 'products' && <ProductsTab store={store} activeProducts={activeProducts} />}
         {activeTab === 'pricing' && <PricingTab store={store} />}
-        {activeTab === 'dogs' && <KarteTab />}
+        {activeTab === 'dogs' && <VisitingDogsTab storeId={storeId} />}
       </div>
 
       {/* 固定予約ボタン */}
@@ -343,11 +344,89 @@ function PricingTab({ store }: { store: Store }) {
   )
 }
 
-// ── カルテタブ（大枠のみ・中身は今後実装） ────────────────────────────
-function KarteTab() {
+// ── 来店犬タブ（公開ギャラリー）────────────────────────────────────
+interface VisitingDogEntry {
+  docId: string
+  ownerId: string
+  dogName: string
+  dogBreed?: string
+  dogPhoto?: string
+}
+
+function VisitingDogsTab({ storeId }: { storeId: string }) {
+  const [dogs, setDogs] = useState<VisitingDogEntry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      const snap = await getDocs(
+        query(collection(db, 'shops', storeId, 'visitingDogs'), where('isPublic', '==', true))
+      )
+      const entries: VisitingDogEntry[] = []
+      await Promise.all(
+        snap.docs.map(async (d) => {
+          const { ownerId, dogId } = d.data() as { ownerId?: string; dogId?: string }
+          if (!ownerId || !dogId) return
+          try {
+            const dogSnap = await getDoc(doc(db, 'owners', ownerId, 'dogs', dogId))
+            if (!dogSnap.exists()) return
+            const data = dogSnap.data()
+            entries.push({
+              docId: d.id,
+              ownerId,
+              dogName: (data.name as string) ?? '名前未設定',
+              dogBreed: data.breed as string | undefined,
+              dogPhoto: data.photoUrl as string | undefined,
+            })
+          } catch {
+            // アクセス不可の場合はスキップ
+          }
+        })
+      )
+      setDogs(entries)
+      setLoading(false)
+    }
+    load().catch(() => setLoading(false))
+  }, [storeId])
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="aspect-[3/4] bg-gray-200 rounded-xl animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
+  if (dogs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+        <Dog size={36} strokeWidth={1.5} />
+        <p className="text-sm">まだ来店した子はいません</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-      <p className="text-sm">カルテ機能は現在準備中です。</p>
+    <div className="grid grid-cols-2 gap-3">
+      {dogs.map((dog) => (
+        <Link key={dog.docId} href={`/dogs/${dog.ownerId}/${dog.docId}`}>
+          <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
+            {dog.dogPhoto ? (
+              <Image src={dog.dogPhoto} alt={dog.dogName} fill className="object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Dog size={32} className="text-gray-300" strokeWidth={1.5} />
+              </div>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+              <p className="text-white font-bold text-sm leading-tight">{dog.dogName}</p>
+              {dog.dogBreed && <p className="text-white/80 text-xs mt-0.5">{dog.dogBreed}</p>}
+            </div>
+          </div>
+        </Link>
+      ))}
     </div>
   )
 }

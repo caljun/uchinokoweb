@@ -8,7 +8,7 @@ import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebas
 import { db } from '@/lib/firebase'
 import { Store, StoreProduct } from '@/types/store'
 import {
-  ChevronLeft, ChevronRight, Package, Star, ShoppingCart, ArrowLeft,
+  ChevronLeft, ChevronRight, Package, Star, ShoppingCart, ArrowLeft, Dog,
 } from 'lucide-react'
 
 interface ProductReview {
@@ -22,7 +22,7 @@ interface ProductReview {
   createdAt?: { toDate?: () => Date }
 }
 
-type ProductTab = 'related' | 'dogs'
+type ProductTab = 'related' | 'dogs' | 'reviews'
 
 export default function ProductDetailPage() {
   const { storeId, productId } = useParams<{ storeId: string; productId: string }>()
@@ -89,6 +89,7 @@ export default function ProductDetailPage() {
   const tabs: { key: ProductTab; label: string }[] = [
     { key: 'related', label: '関連商品' },
     { key: 'dogs', label: '購入した子' },
+    ...(reviews.length > 0 ? [{ key: 'reviews' as ProductTab, label: `レビュー (${reviews.length})` }] : []),
   ]
 
   return (
@@ -209,7 +210,7 @@ export default function ProductDetailPage() {
           </div>
 
           {/* タブコンテンツ */}
-          {activeTab === 'related' ? (
+          {activeTab === 'related' && (
             relatedProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {relatedProducts.map((p) => (
@@ -237,18 +238,15 @@ export default function ProductDetailPage() {
             ) : (
               <p className="text-sm text-gray-400 text-center py-8">関連商品はまだありません。</p>
             )
-          ) : (
-            <p className="text-sm text-gray-400 text-center py-8">購入した子の表示は現在準備中です。</p>
           )}
 
-          {/* レビュー一覧（そのまま下に） */}
-          {reviews.length > 0 && (
-            <div className="mt-4 space-y-3">
-              <h2 className="text-lg font-bold text-gray-900 mb-2">
-                レビュー
-                <span className="text-base font-normal text-gray-400 ml-2">({reviews.length}件)</span>
-              </h2>
-              {reviews.slice(0, 5).map((review) => {
+          {activeTab === 'dogs' && (
+            <ProductKarteTab storeId={storeId} productId={productId} />
+          )}
+
+          {activeTab === 'reviews' && (
+            <div className="space-y-3">
+              {reviews.map((review) => {
                 const date = review.createdAt?.toDate?.() ?? null
                 return (
                   <div key={review.reviewId} className="bg-white rounded-xl p-4">
@@ -308,6 +306,102 @@ export default function ProductDetailPage() {
           {added ? '追加しました' : 'カートに追加'}
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── 購入した子タブ（公開ギャラリー）──────────────────────────────
+interface PurchasedDogEntry {
+  docId: string
+  ownerId: string
+  dogName: string
+  dogBreed?: string
+  dogPhoto?: string
+}
+
+function ProductKarteTab({
+  storeId, productId,
+}: {
+  storeId: string
+  productId: string
+}) {
+  const [dogs, setDogs] = useState<PurchasedDogEntry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      const snap = await getDocs(
+        query(
+          collection(db, 'shops', storeId, 'purchasedDogs'),
+          where('isPublic', '==', true),
+          where('productIds', 'array-contains', productId)
+        )
+      )
+      const entries: PurchasedDogEntry[] = []
+      await Promise.all(
+        snap.docs.map(async (d) => {
+          const { ownerId, dogId } = d.data() as { ownerId?: string; dogId?: string }
+          if (!ownerId || !dogId) return
+          try {
+            const dogSnap = await getDoc(doc(db, 'owners', ownerId, 'dogs', dogId))
+            if (!dogSnap.exists()) return
+            const data = dogSnap.data()
+            entries.push({
+              docId: d.id,
+              ownerId,
+              dogName: (data.name as string) ?? '名前未設定',
+              dogBreed: data.breed as string | undefined,
+              dogPhoto: data.photoUrl as string | undefined,
+            })
+          } catch {
+            // アクセス不可の場合はスキップ
+          }
+        })
+      )
+      setDogs(entries)
+      setLoading(false)
+    }
+    load().catch(() => setLoading(false))
+  }, [storeId, productId])
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="aspect-[3/4] bg-gray-200 rounded-xl animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
+  if (dogs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+        <Dog size={36} strokeWidth={1.5} />
+        <p className="text-sm">まだ購入した子はいません</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {dogs.map((dog) => (
+        <Link key={dog.docId} href={`/dogs/${dog.ownerId}/${dog.docId}`}>
+          <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
+            {dog.dogPhoto ? (
+              <Image src={dog.dogPhoto} alt={dog.dogName} fill className="object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Dog size={32} className="text-gray-300" strokeWidth={1.5} />
+              </div>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+              <p className="text-white font-bold text-sm leading-tight">{dog.dogName}</p>
+              {dog.dogBreed && <p className="text-white/80 text-xs mt-0.5">{dog.dogBreed}</p>}
+            </div>
+          </div>
+        </Link>
+      ))}
     </div>
   )
 }
