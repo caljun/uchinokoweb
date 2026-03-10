@@ -345,7 +345,7 @@ function PricingTab({ store }: { store: Store }) {
   )
 }
 
-// ── 来店犬タブ（公開ギャラリー）────────────────────────────────────
+// ── 来店した子タブ（公開ギャラリー）────────────────────────────────────
 interface VisitingDogEntry {
   docId: string
   dogId: string
