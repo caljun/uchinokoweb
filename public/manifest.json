@@ -2,7 +2,7 @@
   "name": "ウチの子",
   "short_name": "ウチの子",
   "description": "わんちゃんと飼い主さんをつなぐプラットフォーム",
-  "start_url": "/home",
+  "start_url": "/uchinoko",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f9fafb",
