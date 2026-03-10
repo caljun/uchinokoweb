@@ -55,7 +55,7 @@ interface AuthContextType {
   reloadOwner: () => Promise<void>
   setHasDog: (v: boolean) => void
   toggleFavoriteStore: (storeId: string) => Promise<void>
-  addMissionPoints: (missionId: string, points: number) => Promise<boolean>
+  addMissionPoints: (dogId: string, missionId: string, points: number) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -182,12 +182,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchOwner(user.uid)
   }, [user, owner, fetchOwner])
 
-  // ミッション達成 → ポイント付与。すでに今日達成済みなら false を返す
-  const addMissionPoints = useCallback(async (missionId: string, points: number): Promise<boolean> => {
+  // ミッション達成 → 犬単位でポイント付与。すでに今日達成済みなら false を返す
+  const addMissionPoints = useCallback(async (dogId: string, missionId: string, points: number): Promise<boolean> => {
     if (!user) return false
     const today = getTodayStr()
-    const completedRef = doc(db, 'owners', user.uid, 'completedMissions', `${today}_${missionId}`)
-    const ownerRef = doc(db, 'owners', user.uid)
+    const completedRef = doc(db, 'owners', user.uid, 'dogs', dogId, 'completedMissions', `${today}_${missionId}`)
+    const dogRef = doc(db, 'owners', user.uid, 'dogs', dogId)
     const currentWeek = getCurrentWeekStr()
 
     try {
@@ -196,14 +196,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const completedSnap = await tx.get(completedRef)
         if (completedSnap.exists()) return // 今日すでに達成済み
 
-        const ownerSnap = await tx.get(ownerRef)
-        const ownerData = ownerSnap.data() ?? {}
-        const storedWeek = ownerData.weeklyPointsWeekStr as string | undefined
-
+        const dogSnap = await tx.get(dogRef)
+        const dogData = dogSnap.data() ?? {}
+        const storedWeek = dogData.weeklyPointsWeekStr as string | undefined
         const weeklyReset = storedWeek !== currentWeek
 
         tx.set(completedRef, { missionId, points, completedAt: serverTimestamp() })
-        tx.update(ownerRef, {
+        tx.update(dogRef, {
+          ownerId: user.uid, // ランキング用にownerId を常に保持
           totalPoints: increment(points),
           weeklyPoints: weeklyReset ? points : increment(points),
           weeklyPointsWeekStr: currentWeek,
@@ -211,12 +211,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         awarded = true
       })
 
-      if (awarded) await fetchOwner(user.uid)
       return awarded
     } catch {
       return false
     }
-  }, [user, fetchOwner])
+  }, [user])
 
   return (
     <AuthContext.Provider value={{ user, owner, hasDog, loading, signIn, signUp, signOut, reloadOwner, setHasDog, toggleFavoriteStore, addMissionPoints }}>

@@ -93,7 +93,7 @@ export default function OwnerProfilePage() {
           onClose={() => setShowSettings(false)}
           onSignOut={async () => {
             await signOut()
-            router.replace('/home')
+            router.replace('/uchinoko')
           }}
         />
       )}

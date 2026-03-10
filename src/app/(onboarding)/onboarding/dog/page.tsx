@@ -147,7 +147,7 @@ export default function OnboardingDogPage() {
       }
 
       setHasDog(true)
-      router.push('/home')
+      router.push('/uchinoko')
     } catch (e) {
       setError('保存に失敗しました。もう一度お試しください。')
       console.error(e)

@@ -24,7 +24,7 @@ export default function AuthPage() {
       } else {
         await signUp(email, password, displayName)
       }
-      router.replace('/home')
+      router.replace('/uchinoko')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '認証に失敗しました'
       setError(msg)

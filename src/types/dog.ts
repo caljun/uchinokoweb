@@ -36,6 +36,12 @@ export interface Dog {
   photoUrl?: string
   isPublic: boolean
   createdAt: Date
+
+  // ゲーム関連（ランキング用）
+  ownerId?: string
+  totalPoints?: number
+  weeklyPoints?: number
+  weeklyPointsWeekStr?: string
 }
 
 export interface DiaryCreatedBy {

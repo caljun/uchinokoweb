@@ -9,7 +9,7 @@ export default function ProfileSettingsPage() {
 
   const handleSignOut = async () => {
     await signOut()
-    router.replace('/home')
+    router.replace('/uchinoko')
   }
 
   const handleDeleteAccount = () => {
