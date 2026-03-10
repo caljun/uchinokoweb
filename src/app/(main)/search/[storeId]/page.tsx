@@ -14,6 +14,7 @@ import {
   Package, Store as StoreIcon, Star, ArrowLeft, CalendarPlus,
   Dog,
 } from 'lucide-react'
+import { getAgeDisplayText } from '@/lib/diagnosis'
 
 type Tab = 'info' | 'products' | 'pricing' | 'dogs'
 
@@ -347,9 +348,11 @@ function PricingTab({ store }: { store: Store }) {
 // ── 来店犬タブ（公開ギャラリー）────────────────────────────────────
 interface VisitingDogEntry {
   docId: string
+  dogId: string
   ownerId: string
   dogName: string
-  dogBreed?: string
+  dogAge?: string
+  dogGender?: string
   dogPhoto?: string
 }
 
@@ -371,11 +374,16 @@ function VisitingDogsTab({ storeId }: { storeId: string }) {
             const dogSnap = await getDoc(doc(db, 'owners', ownerId, 'dogs', dogId))
             if (!dogSnap.exists()) return
             const data = dogSnap.data()
+            const birthDate = data.birthDate?.toDate ? data.birthDate.toDate() : null
+            const dogAge = birthDate ? getAgeDisplayText(birthDate, (data.breedSize as number) ?? 0) : undefined
+            const dogGender = data.gender === 'male' ? 'オス' : data.gender === 'female' ? 'メス' : undefined
             entries.push({
               docId: d.id,
+              dogId,
               ownerId,
               dogName: (data.name as string) ?? '名前未設定',
-              dogBreed: data.breed as string | undefined,
+              dogAge,
+              dogGender,
               dogPhoto: data.photoUrl as string | undefined,
             })
           } catch {
@@ -411,7 +419,7 @@ function VisitingDogsTab({ storeId }: { storeId: string }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {dogs.map((dog) => (
-        <Link key={dog.docId} href={`/dogs/${dog.ownerId}/${dog.docId}`}>
+        <Link key={dog.docId} href={`/dogs/${dog.ownerId}/${dog.dogId}`}>
           <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
             {dog.dogPhoto ? (
               <Image src={dog.dogPhoto} alt={dog.dogName} fill className="object-cover" />
@@ -422,7 +430,11 @@ function VisitingDogsTab({ storeId }: { storeId: string }) {
             )}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
               <p className="text-white font-bold text-sm leading-tight">{dog.dogName}</p>
-              {dog.dogBreed && <p className="text-white/80 text-xs mt-0.5">{dog.dogBreed}</p>}
+              {(dog.dogAge || dog.dogGender) && (
+                <p className="text-white/80 text-xs mt-0.5">
+                  {[dog.dogAge, dog.dogGender].filter(Boolean).join(' ・ ')}
+                </p>
+              )}
             </div>
           </div>
         </Link>
