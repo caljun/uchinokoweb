@@ -266,9 +266,9 @@ export default function UchinokoDetailPage() {
                 }
 
                 return (
-                  <div className="grid grid-cols-3 gap-0.5">
+                  <div className="grid grid-cols-2 gap-1">
                     {allPhotos.map((photo, i) => (
-                      <div key={i} className="relative aspect-square bg-gray-100 overflow-hidden">
+                      <div key={i} className="relative aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden">
                         <Image
                           src={photo.url}
                           alt={`photo ${i}`}
