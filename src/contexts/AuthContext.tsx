@@ -12,13 +12,13 @@ import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
   arrayUnion, arrayRemove,
   collection, getDocs, query, limit,
+  increment, runTransaction,
 } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 
 export interface OwnerProfile {
   uid: string
   email: string
-  // 表示名（後方互換のため両方保持）
   displayName?: string
   name?: string
   nameKana?: string
@@ -26,10 +26,8 @@ export interface OwnerProfile {
   latitude?: number
   longitude?: number
   gender?: string
-  // 生年月日（後方互換のため両方保持。iOS は birthday, web 旧版は birthDate）
   birthDate?: string
   birthday?: string
-  // 住所（旧: address 1フィールド / iOS: 細分化フィールド）
   address?: string
   phone?: string
   postalCode?: string
@@ -37,9 +35,13 @@ export interface OwnerProfile {
   city?: string
   street?: string
   building?: string
-  // お気に入り（Firestore フィールド名: favorite_store_ids / favorite_product_ids）
   favoriteStoreIds: string[]
   favoriteProductIds: string[]
+  // ゲーム関連
+  totalPoints: number
+  weeklyPoints: number
+  weeklyPointsWeekStr?: string
+  primaryDogName?: string
 }
 
 interface AuthContextType {
@@ -53,11 +55,11 @@ interface AuthContextType {
   reloadOwner: () => Promise<void>
   setHasDog: (v: boolean) => void
   toggleFavoriteStore: (storeId: string) => Promise<void>
+  addMissionPoints: (missionId: string, points: number) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-// FirestoreのTimestamp・Date・文字列を "YYYY-MM-DD" 文字列に変換
 function toDateString(val: unknown): string | undefined {
   if (!val) return undefined
   if (typeof val === 'string') return val
@@ -94,7 +96,25 @@ function parseOwner(uid: string, data: Record<string, unknown>): OwnerProfile {
     building: data.building as string | undefined,
     favoriteStoreIds: (data.favorite_store_ids as string[]) ?? [],
     favoriteProductIds: (data.favorite_product_ids as string[]) ?? [],
+    totalPoints: (data.totalPoints as number) ?? 0,
+    weeklyPoints: (data.weeklyPoints as number) ?? 0,
+    weeklyPointsWeekStr: data.weeklyPointsWeekStr as string | undefined,
+    primaryDogName: data.primaryDogName as string | undefined,
   }
+}
+
+function getCurrentWeekStr(): string {
+  const now = new Date()
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
+}
+
+function getTodayStr(): string {
+  return new Date().toISOString().split('T')[0]
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -110,7 +130,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setOwner(null)
     }
-    // 犬が1頭でも登録されているか確認
     const dogsSnap = await getDocs(query(collection(db, 'owners', uid, 'dogs'), limit(1)))
     setHasDog(!dogsSnap.empty)
   }, [])
@@ -143,6 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setDoc(doc(db, 'owners', newUser.uid), {
       email,
       displayName,
+      totalPoints: 0,
+      weeklyPoints: 0,
+      weeklyPointsWeekStr: getCurrentWeekStr(),
       createdAt: serverTimestamp(),
     })
   }
@@ -160,8 +182,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchOwner(user.uid)
   }, [user, owner, fetchOwner])
 
+  // ミッション達成 → ポイント付与。すでに今日達成済みなら false を返す
+  const addMissionPoints = useCallback(async (missionId: string, points: number): Promise<boolean> => {
+    if (!user) return false
+    const today = getTodayStr()
+    const completedRef = doc(db, 'owners', user.uid, 'completedMissions', `${today}_${missionId}`)
+    const ownerRef = doc(db, 'owners', user.uid)
+    const currentWeek = getCurrentWeekStr()
+
+    try {
+      let awarded = false
+      await runTransaction(db, async (tx) => {
+        const completedSnap = await tx.get(completedRef)
+        if (completedSnap.exists()) return // 今日すでに達成済み
+
+        const ownerSnap = await tx.get(ownerRef)
+        const ownerData = ownerSnap.data() ?? {}
+        const storedWeek = ownerData.weeklyPointsWeekStr as string | undefined
+
+        const weeklyReset = storedWeek !== currentWeek
+
+        tx.set(completedRef, { missionId, points, completedAt: serverTimestamp() })
+        tx.update(ownerRef, {
+          totalPoints: increment(points),
+          weeklyPoints: weeklyReset ? points : increment(points),
+          weeklyPointsWeekStr: currentWeek,
+        })
+        awarded = true
+      })
+
+      if (awarded) await fetchOwner(user.uid)
+      return awarded
+    } catch {
+      return false
+    }
+  }, [user, fetchOwner])
+
   return (
-    <AuthContext.Provider value={{ user, owner, hasDog, loading, signIn, signUp, signOut, reloadOwner, setHasDog, toggleFavoriteStore }}>
+    <AuthContext.Provider value={{ user, owner, hasDog, loading, signIn, signUp, signOut, reloadOwner, setHasDog, toggleFavoriteStore, addMissionPoints }}>
       {children}
     </AuthContext.Provider>
   )

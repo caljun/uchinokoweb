@@ -5,15 +5,14 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { doc, getDoc, collection, query, orderBy, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '@/lib/firebase'
+import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Dog, Diary, HealthRecord } from '@/types/dog'
-import { Pencil, Share2 } from 'lucide-react'
+import { Pencil, Share2, Target } from 'lucide-react'
 import { ShareCardsModal } from '@/components/share/ShareCardsModal'
 import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
 
-type Tab = 'info' | 'diary' | 'health'
+type Tab = 'info' | 'gallery' | 'health'
 
 const SIZE_LABELS = ['小型犬', '中型犬', '大型犬']
 const CONDITIONS = ['元気', '普通', 'ちょっと心配', 'しんどい']
@@ -51,7 +50,6 @@ export default function UchinokoDetailPage() {
   const [tab, setTab] = useState<Tab>('info')
   const [detailSlide, setDetailSlide] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [showDiaryModal, setShowDiaryModal] = useState(false)
   const [showHealthModal, setShowHealthModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const touchStartX = useRef<number | null>(null)
@@ -83,7 +81,7 @@ export default function UchinokoDetailPage() {
         {/* タブ */}
         <div className="bg-white border-b border-gray-100 mt-2">
           <div className="px-5 flex">
-            {(['info', 'diary', 'health'] as Tab[]).map((t) => (
+            {(['info', 'gallery', 'health'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -91,7 +89,7 @@ export default function UchinokoDetailPage() {
                   tab === t ? 'border-orange-400 text-orange-500' : 'border-transparent text-gray-400'
                 }`}
               >
-                {t === 'info' ? '詳細' : t === 'diary' ? '日記' : '健康'}
+                {t === 'info' ? '詳細' : t === 'gallery' ? 'ギャラリー' : '健康'}
               </button>
             ))}
           </div>
@@ -242,44 +240,46 @@ export default function UchinokoDetailPage() {
             </div>
           )}
 
-          {/* 日記タブ */}
-          {tab === 'diary' && (
+          {/* ギャラリータブ */}
+          {tab === 'gallery' && (
             <div>
-              <div className="flex justify-end mb-3">
-                <button
-                  onClick={() => setShowDiaryModal(true)}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold"
-                >
-                  + 日記を書く
-                </button>
-              </div>
-              {diaries.length === 0 ? (
-                <EmptyState emoji="📔" text="まだ日記がありません" />
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {diaries.map((diary) => (
-                    <Link key={diary.id} href={`/uchinoko/${dogId}/diary/${diary.id}`}>
-                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100">
-                        {diary.photos?.[0] ? (
-                          <Image src={diary.photos[0]} alt="diary" fill className="object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl bg-orange-50">📔</div>
-                        )}
-                        {diary.createdBy?.type === 'shop' && (
-                          <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                            {diary.createdBy.name}
-                          </span>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                          {diary.comment && (
-                            <p className="text-white text-xs leading-tight line-clamp-2">{diary.comment}</p>
-                          )}
-                        </div>
+              {(() => {
+                // diariesから写真URLを全部フラットに展開
+                const allPhotos = diaries.flatMap((d) =>
+                  (d.photos ?? []).map((url) => ({ url, comment: d.comment, createdAt: d.createdAt }))
+                ).filter((p) => p.url)
+
+                if (allPhotos.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
+                      <span className="text-5xl">📸</span>
+                      <p className="text-sm font-medium text-gray-500">まだ写真がありません</p>
+                      <Link
+                        href="/missions"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl"
+                      >
+                        <Target size={16} />
+                        ミッションをクリアしよう
+                      </Link>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="grid grid-cols-3 gap-0.5">
+                    {allPhotos.map((photo, i) => (
+                      <div key={i} className="relative aspect-square bg-gray-100 overflow-hidden">
+                        <Image
+                          src={photo.url}
+                          alt={`photo ${i}`}
+                          fill
+                          className="object-cover"
+                        />
                       </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )
+              })()}
             </div>
           )}
 
@@ -325,16 +325,6 @@ export default function UchinokoDetailPage() {
             </div>
           )}
         </div>
-
-        {/* 日記追加モーダル */}
-        {showDiaryModal && user && dogId && (
-          <DiaryModal
-            ownerId={user.uid}
-            dogId={dogId}
-            onClose={() => setShowDiaryModal(false)}
-            onCreated={(diary) => setDiaries((prev) => [diary, ...prev])}
-          />
-        )}
 
         {/* シェアカードモーダル */}
         {showShareModal && (
@@ -460,144 +450,6 @@ function ModalShell({ children, onClose }: { children: React.ReactNode; onClose:
         <div className="px-5 pb-5">{children}</div>
       </div>
     </div>
-  )
-}
-
-type DiaryModalProps = {
-  ownerId: string
-  dogId: string
-  onClose: () => void
-  onCreated: (diary: Diary) => void
-}
-
-function DiaryModal({ ownerId, dogId, onClose, onCreated }: DiaryModalProps) {
-  const [comment, setComment] = useState('')
-  const [photos, setPhotos] = useState<File[]>([])
-  const [previews, setPreviews] = useState<string[]>([])
-  const [saving, setSaving] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? [])
-    const remaining = 3 - photos.length
-    const newFiles = files.slice(0, remaining)
-    setPhotos((prev) => [...prev, ...newFiles])
-    setPreviews((prev) => [...prev, ...newFiles.map((f) => URL.createObjectURL(f))])
-  }
-
-  const removePhoto = (i: number) => {
-    setPhotos((prev) => prev.filter((_, idx) => idx !== i))
-    setPreviews((prev) => prev.filter((_, idx) => idx !== i))
-  }
-
-  const handleSave = async () => {
-    if (!comment.trim()) return
-    setSaving(true)
-    try {
-      const docRef = await addDoc(
-        collection(db, 'owners', ownerId, 'dogs', dogId, 'diaries'),
-        {
-          dogId,
-          ownerId,
-          comment,
-          photos: [],
-          createdAt: serverTimestamp(),
-        }
-      )
-
-      // 写真アップロード（最大3枚）
-      const uploadedUrls: string[] = []
-      for (let i = 0; i < photos.length; i++) {
-        const storageRef = ref(
-          storage,
-          `owners/${ownerId}/dogs/${dogId}/diaries/${docRef.id}/photo_${i}.jpg`
-        )
-        await uploadBytes(storageRef, photos[i])
-        const url = await getDownloadURL(storageRef)
-        uploadedUrls.push(url)
-      }
-
-      // Firestore の photos を更新
-      if (uploadedUrls.length > 0) {
-        const { doc, updateDoc } = await import('firebase/firestore')
-        await updateDoc(doc(db, 'owners', ownerId, 'dogs', dogId, 'diaries', docRef.id), {
-          photos: uploadedUrls,
-        })
-      }
-
-      onCreated({
-        id: docRef.id,
-        dogId,
-        ownerId,
-        comment,
-        photos: uploadedUrls,
-        createdAt: new Date(),
-      } as Diary)
-      onClose()
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <ModalShell onClose={onClose}>
-      <h2 className="text-base font-bold text-gray-800 mb-4">日記を書く</h2>
-      {/* 写真 */}
-      <div className="mb-5">
-        <p className="text-sm font-medium text-gray-700 mb-2">写真（最大3枚）</p>
-        <div className="flex gap-3 flex-wrap">
-          {previews.map((src, i) => (
-            <div key={i} className="relative w-24 h-24">
-              <Image src={src} alt={`photo ${i}`} fill className="object-cover rounded-xl" />
-              <button
-                onClick={() => removePhoto(i)}
-                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          {photos.length < 3 && (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-24 h-24 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400"
-            >
-              <span className="text-2xl">+</span>
-              <span className="text-xs">追加</span>
-            </button>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handlePhotoAdd}
-          />
-        </div>
-      </div>
-
-      {/* コメント */}
-      <div className="mb-4">
-        <p className="text-sm font-medium text-gray-700 mb-2">コメント *</p>
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value.slice(0, 100))}
-          placeholder="今日のうちの子の様子を書いてね..."
-          rows={4}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white text-sm resize-none"
-        />
-        <p className="text-xs text-gray-400 text-right mt-1">{comment.length}/100</p>
-      </div>
-
-      <button
-        onClick={handleSave}
-        disabled={saving || !comment.trim()}
-        className="w-full py-3 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors disabled:opacity-40"
-      >
-        {saving ? '保存中...' : '保存する'}
-      </button>
-    </ModalShell>
   )
 }
 

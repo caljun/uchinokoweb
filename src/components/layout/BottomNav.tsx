@@ -2,14 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ShoppingCart, Calendar, User, PawPrint } from 'lucide-react'
+import { Target, Trophy, Home, PawPrint } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/home', label: 'ホーム', Icon: Home },
-  { href: '/profile', label: 'マイページ', Icon: User },
-  { href: '/cart', label: 'カート', Icon: ShoppingCart },
-  { href: '/reservations', label: '予約', Icon: Calendar },
   { href: '/uchinoko', label: 'ウチの子', Icon: PawPrint },
+  { href: '/missions', label: 'ミッション', Icon: Target },
+  { href: '/ranking', label: 'ランキング', Icon: Trophy },
+  { href: '/home', label: 'おすすめ', Icon: Home },
 ]
 
 export default function BottomNav() {
@@ -24,7 +23,7 @@ export default function BottomNav() {
       }}
     >
       {NAV_ITEMS.map(({ href, label, Icon }) => {
-        const active = pathname === href
+        const active = pathname.startsWith(href)
         return (
           <Link
             key={href}
