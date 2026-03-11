@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dog } from '@/types/dog'
-import { PawPrint, UserPlus, Settings, ChevronRight, Plus, Check } from 'lucide-react'
+import { PawPrint, UserPlus, Settings, ChevronRight, Plus } from 'lucide-react'
 
 interface FriendEntry {
   uid: string
@@ -25,25 +25,6 @@ export default function ProfilePage() {
   const [pendingCount, setPendingCount] = useState(0)
   const [friends, setFriends] = useState<FriendEntry[]>([])
   const [loadingFriends, setLoadingFriends] = useState(true)
-  const [copied, setCopied] = useState(false)
-
-  const handleInvite = async () => {
-    const dog = dogs[0]
-    const url = dog
-      ? `${window.location.origin}/dogs/${user!.uid}/${dog.id}`
-      : window.location.origin
-    const text = dog
-      ? `うちの子「${dog.name}」のプロフィールを見てね！うちの子アプリで一緒にポイントを競おう🐾`
-      : 'うちの子アプリで一緒にポイントを競おう🐾'
-
-    if (navigator.share) {
-      await navigator.share({ title: 'うちの子', text, url }).catch(() => {})
-    } else {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
 
   useEffect(() => {
     if (!user) return
@@ -218,35 +199,19 @@ export default function ProfilePage() {
             )}
 
             {/* 友達招待 */}
-            <div className="px-5 py-4 border-b border-gray-50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <UserPlus size={18} className="text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-800">友達を招待する</p>
-                  <p className="text-xs text-gray-400 mt-0.5">このリンクを友達に送ろう</p>
-                </div>
+            <Link
+              href="/profile/friends"
+              className="flex items-center gap-3 px-5 py-4 border-b border-gray-50 hover:bg-orange-50 transition-colors"
+            >
+              <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <UserPlus size={18} className="text-orange-500" />
               </div>
-              {/* リンク表示 + コピーボタン */}
-              {!loadingDogs && dogs[0] && (
-                <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
-                  <p className="flex-1 text-xs text-gray-500 truncate">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/dogs/${user!.uid}/${dogs[0].id}` : ''}
-                  </p>
-                  <button
-                    onClick={handleInvite}
-                    className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
-                      copied
-                        ? 'bg-green-100 text-green-600'
-                        : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
-                    }`}
-                  >
-                    {copied ? <Check size={14} /> : 'シェア'}
-                  </button>
-                </div>
-              )}
-            </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-gray-800">友達を探す</p>
+                <p className="text-xs text-gray-400 mt-0.5">メールアドレスで検索できます</p>
+              </div>
+              <ChevronRight size={16} className="text-gray-300" />
+            </Link>
 
             {/* 友達リスト */}
             {loadingFriends ? (

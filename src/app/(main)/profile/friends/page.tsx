@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   collection, query, where, getDocs, doc, getDoc,
-  updateDoc, deleteDoc, setDoc, serverTimestamp, orderBy,
+  updateDoc, deleteDoc, setDoc, serverTimestamp, orderBy, addDoc,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
-import { ArrowLeft, Users } from 'lucide-react'
+import { ArrowLeft, Users, Search } from 'lucide-react'
 
-type ActiveTab = 'requests' | 'friends'
+type ActiveTab = 'search' | 'requests' | 'friends'
 
 interface FriendRequest {
   id: string
@@ -26,10 +26,17 @@ interface FriendEntry {
   since: unknown
 }
 
+interface SearchResult {
+  uid: string
+  displayName: string
+  email: string
+  photoUrl?: string
+}
+
 export default function FriendsPage() {
   const router = useRouter()
   const { user, owner } = useAuth()
-  const [activeTab, setActiveTab] = useState<ActiveTab>('requests')
+  const [activeTab, setActiveTab] = useState<ActiveTab>('search')
 
   const [requests, setRequests] = useState<FriendRequest[]>([])
   const [loadingRequests, setLoadingRequests] = useState(true)
@@ -38,6 +45,13 @@ export default function FriendsPage() {
   const [loadingFriends, setLoadingFriends] = useState(true)
 
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  // 検索
+  const [searchEmail, setSearchEmail] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [searchResult, setSearchResult] = useState<SearchResult | null | 'notfound'>('notfound')
+  const [searchDone, setSearchDone] = useState(false)
+  const [requestSent, setRequestSent] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -98,6 +112,50 @@ export default function FriendsPage() {
     setLoadingFriends(false)
   }
 
+  const handleSearch = async () => {
+    if (!user || !searchEmail.trim()) return
+    setSearching(true)
+    setSearchDone(false)
+    setSearchResult('notfound')
+    setRequestSent(false)
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'owners'), where('email', '==', searchEmail.trim().toLowerCase()))
+      )
+      if (snap.empty) {
+        setSearchResult('notfound')
+      } else {
+        const d = snap.docs[0]
+        const data = d.data()
+        setSearchResult({
+          uid: d.id,
+          displayName: (data.displayName as string) ?? 'オーナー',
+          email: (data.email as string) ?? '',
+          photoUrl: data.photoUrl as string | undefined,
+        })
+      }
+    } catch {
+      setSearchResult('notfound')
+    }
+    setSearchDone(true)
+    setSearching(false)
+  }
+
+  const handleSendRequest = async (toUid: string) => {
+    if (!user || actionLoading) return
+    setActionLoading(toUid)
+    try {
+      await addDoc(collection(db, 'friendRequests'), {
+        fromUid: user.uid,
+        toUid,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      })
+      setRequestSent(true)
+    } catch {}
+    setActionLoading(null)
+  }
+
   const handleAccept = async (req: FriendRequest) => {
     if (!user || actionLoading) return
     setActionLoading(req.id)
@@ -156,8 +214,9 @@ export default function FriendsPage() {
 
       {/* タブ */}
       <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex gap-8">
+        <div className="flex gap-6">
           {([
+            { key: 'search' as ActiveTab, label: '検索' },
             { key: 'requests' as ActiveTab, label: '申請' },
             { key: 'friends' as ActiveTab, label: '友達' },
           ]).map(({ key, label }) => (
@@ -182,6 +241,74 @@ export default function FriendsPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 py-5">
+
+        {/* 検索タブ */}
+        {activeTab === 'search' && (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400">友達のメールアドレスを入力して検索</p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={searchEmail}
+                onChange={(e) => { setSearchEmail(e.target.value); setSearchDone(false) }}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="example@email.com"
+                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-400"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={searching || !searchEmail.trim()}
+                className="px-4 py-3 bg-orange-500 text-white rounded-xl disabled:opacity-50 transition-colors hover:bg-orange-600"
+              >
+                <Search size={18} />
+              </button>
+            </div>
+
+            {searching && (
+              <div className="bg-white rounded-xl p-4 animate-pulse flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
+                <div className="h-4 w-1/3 bg-gray-200 rounded" />
+              </div>
+            )}
+
+            {searchDone && searchResult === 'notfound' && (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-sm">このメールアドレスのユーザーが見つかりませんでした</p>
+              </div>
+            )}
+
+            {searchDone && searchResult && searchResult !== 'notfound' && (
+              <div className="bg-white rounded-xl p-4 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-100 flex items-center justify-center text-lg font-bold text-orange-500 shrink-0">
+                  {searchResult.photoUrl ? (
+                    <img src={searchResult.photoUrl} alt={searchResult.displayName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{searchResult.displayName?.[0] ?? 'U'}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900 truncate">{searchResult.displayName}</p>
+                  <p className="text-xs text-gray-400 truncate">{searchResult.email}</p>
+                </div>
+                {searchResult.uid === user.uid ? (
+                  <span className="text-xs text-gray-400">自分</span>
+                ) : friends.some(f => f.uid === searchResult.uid) ? (
+                  <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1.5 rounded-xl">友達</span>
+                ) : requestSent ? (
+                  <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1.5 rounded-xl">申請済み</span>
+                ) : (
+                  <button
+                    onClick={() => handleSendRequest((searchResult as SearchResult).uid)}
+                    disabled={actionLoading === searchResult.uid}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-60 transition-colors shrink-0"
+                  >
+                    申請
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 申請タブ */}
         {activeTab === 'requests' && (
