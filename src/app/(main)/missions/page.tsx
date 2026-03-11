@@ -21,7 +21,9 @@ const MISSIONS = [
 ]
 
 function getTodayStr() {
-  return new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return jst.toISOString().split('T')[0]
 }
 
 export default function MissionsPage() {

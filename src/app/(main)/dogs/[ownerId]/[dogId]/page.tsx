@@ -3,13 +3,32 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { doc, getDoc, collection, query, orderBy, getDocs } from 'firebase/firestore'
+import {
+  doc, getDoc, collection, query, orderBy, getDocs,
+  addDoc, setDoc, updateDoc,
+  serverTimestamp, where,
+} from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { useAuth } from '@/contexts/AuthContext'
 import { Dog, Diary, HealthRecord } from '@/types/dog'
-import { ArrowLeft, BookOpen, Heart } from 'lucide-react'
+import { ArrowLeft, BookOpen, Heart, X } from 'lucide-react'
 import { getBreedDescription, getAgeDisplayText, BreedInfo } from '@/lib/diagnosis'
 
 type Tab = 'detail' | 'gallery' | 'health'
+
+type FriendStatus =
+  | 'loading'
+  | 'self'
+  | 'friend'
+  | 'pending_sent'
+  | 'pending_received'
+  | 'none'
+  | 'unauthenticated'
+
+interface OwnerInfo {
+  displayName: string
+  photoUrl?: string
+}
 
 const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
   リーダータイプ: '知恵があり勇敢なまとめ役タイプ。人の役に立ちたいと思っています。',
@@ -37,12 +56,22 @@ function toDate(v: unknown): Date | null {
 export default function PublicDogProfilePage() {
   const { ownerId, dogId } = useParams<{ ownerId: string; dogId: string }>()
   const router = useRouter()
+  const { user } = useAuth()
   const [dog, setDog] = useState<Dog | null>(null)
   const [diaries, setDiaries] = useState<Diary[]>([])
   const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('detail')
+
+  // オーナー情報
+  const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>(null)
+
+  // モーダル
+  const [modalOpen, setModalOpen] = useState(false)
+  const [friendStatus, setFriendStatus] = useState<FriendStatus>('loading')
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
     if (!ownerId || !dogId) return
@@ -63,6 +92,125 @@ export default function PublicDogProfilePage() {
     load().catch(() => { setNotFound(true); setLoading(false) })
   }, [ownerId, dogId])
 
+  // オーナー情報フェッチ（自分のページでなければ）
+  useEffect(() => {
+    if (!ownerId) return
+    if (user && user.uid === ownerId) return
+    getDoc(doc(db, 'owners', ownerId))
+      .then(snap => {
+        if (snap.exists()) {
+          const d = snap.data()
+          setOwnerInfo({
+            displayName: (d.displayName as string) ?? 'オーナー',
+            photoUrl: d.photoUrl as string | undefined,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [ownerId, user])
+
+  // モーダルを開くとき友達ステータスをフェッチ
+  const openModal = async () => {
+    setModalOpen(true)
+    if (!user) {
+      setFriendStatus('unauthenticated')
+      return
+    }
+    if (user.uid === ownerId) {
+      setFriendStatus('self')
+      return
+    }
+    setFriendStatus('loading')
+    setPendingRequestId(null)
+
+    try {
+      // 友達チェック
+      const friendSnap = await getDoc(doc(db, 'owners', user.uid, 'friends', ownerId))
+      if (friendSnap.exists()) {
+        setFriendStatus('friend')
+        return
+      }
+
+      // 自分→相手 pending
+      const sentSnap = await getDocs(
+        query(
+          collection(db, 'friendRequests'),
+          where('fromUid', '==', user.uid),
+          where('toUid', '==', ownerId),
+          where('status', '==', 'pending'),
+        )
+      )
+      if (!sentSnap.empty) {
+        setFriendStatus('pending_sent')
+        setPendingRequestId(sentSnap.docs[0].id)
+        return
+      }
+
+      // 相手→自分 pending
+      const receivedSnap = await getDocs(
+        query(
+          collection(db, 'friendRequests'),
+          where('fromUid', '==', ownerId),
+          where('toUid', '==', user.uid),
+          where('status', '==', 'pending'),
+        )
+      )
+      if (!receivedSnap.empty) {
+        setFriendStatus('pending_received')
+        setPendingRequestId(receivedSnap.docs[0].id)
+        return
+      }
+
+      setFriendStatus('none')
+    } catch {
+      setFriendStatus('none')
+    }
+  }
+
+  const handleSendRequest = async () => {
+    if (!user || actionLoading) return
+    setActionLoading(true)
+    try {
+      await addDoc(collection(db, 'friendRequests'), {
+        fromUid: user.uid,
+        toUid: ownerId,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      })
+      setFriendStatus('pending_sent')
+    } catch {
+      // ignore
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleAccept = async () => {
+    if (!user || !pendingRequestId || actionLoading) return
+    setActionLoading(true)
+    try {
+      await updateDoc(doc(db, 'friendRequests', pendingRequestId), { status: 'accepted' })
+      const now = serverTimestamp()
+      await Promise.all([
+        setDoc(doc(db, 'owners', user.uid, 'friends', ownerId), {
+          since: now,
+          displayName: ownerInfo?.displayName ?? 'オーナー',
+          photoUrl: ownerInfo?.photoUrl ?? null,
+        }),
+        setDoc(doc(db, 'owners', ownerId, 'friends', user.uid), {
+          since: now,
+          displayName: user.displayName ?? 'オーナー',
+          photoUrl: user.photoURL ?? null,
+        }),
+      ])
+      setFriendStatus('friend')
+    } catch {
+      // ignore
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   if (loading) return <DogSkeleton />
 
   if (notFound || !dog) {
@@ -77,6 +225,7 @@ export default function PublicDogProfilePage() {
   const ageText = dog.birthDate ? getAgeDisplayText(dog.birthDate, dog.breedSize) : null
   const breedInfo: BreedInfo | null = dog.breed ? getBreedDescription(dog.breed) : null
   const tempDesc = dog.temperamentType ? TEMPERAMENT_DESCRIPTIONS[dog.temperamentType] : null
+  const isSelf = user?.uid === ownerId
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
@@ -85,7 +234,21 @@ export default function PublicDogProfilePage() {
         <button onClick={() => router.back()} className="p-1.5 -ml-1.5 text-gray-500 hover:text-gray-800">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="font-bold text-gray-900">{dog.name}</h1>
+        <h1 className="font-bold text-gray-900 flex-1">{dog.name}</h1>
+
+        {/* オーナーアバターボタン（自分のページでなければ表示） */}
+        {!isSelf && ownerInfo && (
+          <button
+            onClick={openModal}
+            className="w-8 h-8 rounded-full overflow-hidden bg-orange-100 flex items-center justify-center flex-shrink-0 text-sm font-bold text-orange-500 border border-orange-200"
+          >
+            {ownerInfo.photoUrl ? (
+              <img src={ownerInfo.photoUrl} alt={ownerInfo.displayName} className="w-full h-full object-cover" />
+            ) : (
+              <span>{ownerInfo.displayName?.[0] ?? 'U'}</span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* タブ */}
@@ -268,6 +431,78 @@ export default function PublicDogProfilePage() {
         )}
 
       </div>
+
+      {/* オーナーモーダル */}
+      {modalOpen && ownerInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          {/* オーバーレイ */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setModalOpen(false)}
+          />
+          {/* モーダル本体 */}
+          <div className="relative w-full max-w-sm bg-white rounded-2xl px-6 pt-5 pb-6 shadow-xl">
+            {/* 閉じるボタン */}
+            <button
+              onClick={() => setModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-700"
+            >
+              <X size={20} />
+            </button>
+
+            {/* オーナー情報 */}
+            <div className="flex flex-col items-center gap-3 py-4">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-orange-100 flex items-center justify-center text-2xl font-bold text-orange-500 border border-orange-200">
+                {ownerInfo.photoUrl ? (
+                  <img src={ownerInfo.photoUrl} alt={ownerInfo.displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{ownerInfo.displayName?.[0] ?? 'U'}</span>
+                )}
+              </div>
+              <p className="text-base font-bold text-gray-900">{ownerInfo.displayName}</p>
+
+              {/* 友達ステータスボタン */}
+              {friendStatus === 'loading' && (
+                <div className="h-10 w-32 bg-gray-100 rounded-xl animate-pulse" />
+              )}
+              {friendStatus === 'friend' && (
+                <button
+                  disabled
+                  className="px-6 py-2.5 rounded-xl text-sm font-bold bg-gray-100 text-gray-400 cursor-default"
+                >
+                  友達
+                </button>
+              )}
+              {friendStatus === 'pending_sent' && (
+                <button
+                  disabled
+                  className="px-6 py-2.5 rounded-xl text-sm font-bold bg-gray-100 text-gray-400 cursor-default"
+                >
+                  申請済み
+                </button>
+              )}
+              {friendStatus === 'pending_received' && (
+                <button
+                  onClick={handleAccept}
+                  disabled={actionLoading}
+                  className="px-6 py-2.5 rounded-xl text-sm font-bold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-60 transition-colors"
+                >
+                  {actionLoading ? '処理中...' : '承認する'}
+                </button>
+              )}
+              {friendStatus === 'none' && (
+                <button
+                  onClick={handleSendRequest}
+                  disabled={actionLoading}
+                  className="px-6 py-2.5 rounded-xl text-sm font-bold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-60 transition-colors"
+                >
+                  {actionLoading ? '送信中...' : '友達申請'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -97,18 +97,23 @@ function parseOwner(uid: string, data: Record<string, unknown>): OwnerProfile {
   }
 }
 
+// 日本時間（JST = UTC+9）で今日の日付文字列を返す
+function getTodayStr(): string {
+  const now = new Date()
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return jst.toISOString().split('T')[0]
+}
+
+// 日本時間で今週の週文字列を返す（月曜始まりISO週番号）
 function getCurrentWeekStr(): string {
   const now = new Date()
-  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const d = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), jst.getUTCDate()))
   const dayNum = d.getUTCDay() || 7
   d.setUTCDate(d.getUTCDate() + 4 - dayNum)
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
   const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
-}
-
-function getTodayStr(): string {
-  return new Date().toISOString().split('T')[0]
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
