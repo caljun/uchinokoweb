@@ -9,7 +9,7 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth'
 import {
-  doc, getDoc, setDoc, serverTimestamp,
+  doc, getDoc, setDoc, updateDoc, serverTimestamp,
   collection, getDocs, query, limit,
   increment, runTransaction,
 } from 'firebase/firestore'
@@ -39,6 +39,7 @@ export interface OwnerProfile {
   weeklyPoints: number
   weeklyPointsWeekStr?: string
   primaryDogName?: string
+  friendId?: string
 }
 
 interface AuthContextType {
@@ -94,6 +95,7 @@ function parseOwner(uid: string, data: Record<string, unknown>): OwnerProfile {
     weeklyPoints: (data.weeklyPoints as number) ?? 0,
     weeklyPointsWeekStr: data.weeklyPointsWeekStr as string | undefined,
     primaryDogName: data.primaryDogName as string | undefined,
+    friendId: data.friendId as string | undefined,
   }
 }
 
@@ -123,9 +125,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const fetchOwner = useCallback(async (uid: string) => {
-    const ownerDoc = await getDoc(doc(db, 'owners', uid))
+    const ownerRef = doc(db, 'owners', uid)
+    const ownerDoc = await getDoc(ownerRef)
     if (ownerDoc.exists()) {
-      setOwner(parseOwner(uid, ownerDoc.data() as Record<string, unknown>))
+      const data = ownerDoc.data() as Record<string, unknown>
+      if (!data.friendId) {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+        const friendId = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+        await updateDoc(ownerRef, { friendId })
+        data.friendId = friendId
+      }
+      setOwner(parseOwner(uid, data))
     } else {
       setOwner(null)
     }
@@ -158,9 +168,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, displayName: string) => {
     const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const friendId = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
     await setDoc(doc(db, 'owners', newUser.uid), {
       email,
       displayName,
+      friendId,
       totalPoints: 0,
       weeklyPoints: 0,
       weeklyPointsWeekStr: getCurrentWeekStr(),

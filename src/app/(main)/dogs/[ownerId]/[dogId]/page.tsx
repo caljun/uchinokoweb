@@ -28,6 +28,7 @@ type FriendStatus =
 interface OwnerInfo {
   displayName: string
   photoUrl?: string
+  friendId?: string
 }
 
 const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
@@ -103,6 +104,7 @@ export default function PublicDogProfilePage() {
           setOwnerInfo({
             displayName: (d.displayName as string) ?? 'オーナー',
             photoUrl: d.photoUrl as string | undefined,
+            friendId: d.friendId as string | undefined,
           })
         }
       })
@@ -460,6 +462,9 @@ export default function PublicDogProfilePage() {
                 )}
               </div>
               <p className="text-base font-bold text-gray-900">{ownerInfo.displayName}</p>
+              {ownerInfo.friendId && (
+                <p className="text-xs text-gray-400">ID: {ownerInfo.friendId}</p>
+              )}
 
               {/* 友達ステータスボタン */}
               {friendStatus === 'loading' && (

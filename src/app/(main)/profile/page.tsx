@@ -104,7 +104,7 @@ export default function ProfilePage() {
           {/* 名前・ポイント */}
           <div className="flex-1 min-w-0">
             <p className="text-xl font-bold text-gray-900 truncate">{owner?.displayName ?? 'オーナー'}</p>
-            <p className="text-sm text-gray-400 truncate mt-0.5">{owner?.email}</p>
+            <p className="text-sm text-gray-400 truncate mt-0.5">ID: {owner?.friendId ?? '—'}</p>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs text-orange-500 font-bold bg-orange-50 px-2.5 py-1 rounded-full">
                 {owner?.totalPoints ?? 0}pt
@@ -208,7 +208,6 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 text-left">
                 <p className="text-sm font-medium text-gray-800">友達を探す</p>
-                <p className="text-xs text-gray-400 mt-0.5">メールアドレスで検索できます</p>
               </div>
               <ChevronRight size={16} className="text-gray-300" />
             </Link>

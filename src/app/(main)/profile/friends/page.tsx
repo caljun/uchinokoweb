@@ -29,7 +29,7 @@ interface FriendEntry {
 interface SearchResult {
   uid: string
   displayName: string
-  email: string
+  friendId: string
   photoUrl?: string
 }
 
@@ -47,7 +47,7 @@ export default function FriendsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   // 検索
-  const [searchEmail, setSearchEmail] = useState('')
+  const [searchFriendId, setSearchFriendId] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchResult, setSearchResult] = useState<SearchResult | null | 'notfound'>('notfound')
   const [searchDone, setSearchDone] = useState(false)
@@ -113,14 +113,14 @@ export default function FriendsPage() {
   }
 
   const handleSearch = async () => {
-    if (!user || !searchEmail.trim()) return
+    if (!user || !searchFriendId.trim()) return
     setSearching(true)
     setSearchDone(false)
     setSearchResult('notfound')
     setRequestSent(false)
     try {
       const snap = await getDocs(
-        query(collection(db, 'owners'), where('email', '==', searchEmail.trim().toLowerCase()))
+        query(collection(db, 'owners'), where('friendId', '==', searchFriendId.trim().toUpperCase()))
       )
       if (snap.empty) {
         setSearchResult('notfound')
@@ -130,7 +130,7 @@ export default function FriendsPage() {
         setSearchResult({
           uid: d.id,
           displayName: (data.displayName as string) ?? 'オーナー',
-          email: (data.email as string) ?? '',
+          friendId: (data.friendId as string) ?? '',
           photoUrl: data.photoUrl as string | undefined,
         })
       }
@@ -245,19 +245,20 @@ export default function FriendsPage() {
         {/* 検索タブ */}
         {activeTab === 'search' && (
           <div className="space-y-4">
-            <p className="text-xs text-gray-400">友達のメールアドレスを入力して検索</p>
+            <p className="text-xs text-gray-400">友達のIDを入力して検索（例：ABC123）</p>
             <div className="flex gap-2">
               <input
-                type="email"
-                value={searchEmail}
-                onChange={(e) => { setSearchEmail(e.target.value); setSearchDone(false) }}
+                type="text"
+                value={searchFriendId}
+                onChange={(e) => { setSearchFriendId(e.target.value); setSearchDone(false) }}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="example@email.com"
-                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-400"
+                placeholder="ABC123"
+                maxLength={6}
+                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-400 uppercase"
               />
               <button
                 onClick={handleSearch}
-                disabled={searching || !searchEmail.trim()}
+                disabled={searching || !searchFriendId.trim()}
                 className="px-4 py-3 bg-orange-500 text-white rounded-xl disabled:opacity-50 transition-colors hover:bg-orange-600"
               >
                 <Search size={18} />
@@ -288,7 +289,7 @@ export default function FriendsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-gray-900 truncate">{searchResult.displayName}</p>
-                  <p className="text-xs text-gray-400 truncate">{searchResult.email}</p>
+                  <p className="text-xs text-gray-400 truncate">ID: {searchResult.friendId}</p>
                 </div>
                 {searchResult.uid === user.uid ? (
                   <span className="text-xs text-gray-400">自分</span>
