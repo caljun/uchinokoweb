@@ -130,7 +130,7 @@ export default function RankingPage() {
                   {/* 犬の写真 */}
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-100 relative shrink-0">
                     {entry.photoUrl ? (
-                      <Image src={entry.photoUrl} alt={entry.name} fill className="object-cover" />
+                      <Image src={entry.photoUrl} alt={entry.name} fill sizes="48px" className="object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xl">🐾</div>
                     )}

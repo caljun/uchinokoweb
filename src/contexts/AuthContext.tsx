@@ -9,8 +9,7 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth'
 import {
-  doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  arrayUnion, arrayRemove,
+  doc, getDoc, setDoc, serverTimestamp,
   collection, getDocs, query, limit,
   increment, runTransaction,
 } from 'firebase/firestore'
@@ -35,8 +34,6 @@ export interface OwnerProfile {
   city?: string
   street?: string
   building?: string
-  favoriteStoreIds: string[]
-  favoriteProductIds: string[]
   // ゲーム関連
   totalPoints: number
   weeklyPoints: number
@@ -54,7 +51,6 @@ interface AuthContextType {
   signOut: () => Promise<void>
   reloadOwner: () => Promise<void>
   setHasDog: (v: boolean) => void
-  toggleFavoriteStore: (storeId: string) => Promise<void>
   addMissionPoints: (dogId: string, missionId: string, points: number) => Promise<boolean>
 }
 
@@ -94,8 +90,6 @@ function parseOwner(uid: string, data: Record<string, unknown>): OwnerProfile {
     city: data.city as string | undefined,
     street: data.street as string | undefined,
     building: data.building as string | undefined,
-    favoriteStoreIds: (data.favorite_store_ids as string[]) ?? [],
-    favoriteProductIds: (data.favorite_product_ids as string[]) ?? [],
     totalPoints: (data.totalPoints as number) ?? 0,
     weeklyPoints: (data.weeklyPoints as number) ?? 0,
     weeklyPointsWeekStr: data.weeklyPointsWeekStr as string | undefined,
@@ -173,15 +167,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth)
   }
 
-  const toggleFavoriteStore = useCallback(async (storeId: string) => {
-    if (!user) return
-    const isFav = owner?.favoriteStoreIds?.includes(storeId) ?? false
-    await updateDoc(doc(db, 'owners', user.uid), {
-      favorite_store_ids: isFav ? arrayRemove(storeId) : arrayUnion(storeId),
-    })
-    await fetchOwner(user.uid)
-  }, [user, owner, fetchOwner])
-
   // ミッション達成 → 犬単位でポイント付与。すでに今日達成済みなら false を返す
   const addMissionPoints = useCallback(async (dogId: string, missionId: string, points: number): Promise<boolean> => {
     if (!user) return false
@@ -218,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user])
 
   return (
-    <AuthContext.Provider value={{ user, owner, hasDog, loading, signIn, signUp, signOut, reloadOwner, setHasDog, toggleFavoriteStore, addMissionPoints }}>
+    <AuthContext.Provider value={{ user, owner, hasDog, loading, signIn, signUp, signOut, reloadOwner, setHasDog, addMissionPoints }}>
       {children}
     </AuthContext.Provider>
   )

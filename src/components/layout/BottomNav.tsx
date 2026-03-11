@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Target, Trophy, Home, PawPrint } from 'lucide-react'
+import { Target, Trophy, Home, PawPrint, User } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 const NAV_ITEMS = [
   { href: '/uchinoko', label: 'ウチの子', Icon: PawPrint },
@@ -13,6 +15,8 @@ const NAV_ITEMS = [
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const { owner } = useAuth()
+  const profileActive = pathname.startsWith('/profile')
 
   return (
     <nav
@@ -37,6 +41,21 @@ export default function BottomNav() {
           </Link>
         )
       })}
+      <Link
+        href="/profile"
+        className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
+          profileActive ? 'text-orange-500' : 'text-gray-400'
+        }`}
+      >
+        <div className={`w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold ${owner?.photoUrl ? '' : profileActive ? 'bg-orange-100 text-orange-500' : 'bg-gray-100 text-gray-400'}`}>
+          {owner?.photoUrl ? (
+            <Image src={owner.photoUrl} alt="" width={24} height={24} className="object-cover w-full h-full" />
+          ) : (
+            <User size={14} />
+          )}
+        </div>
+        <span className="text-xs font-medium">マイページ</span>
+      </Link>
     </nav>
   )
 }

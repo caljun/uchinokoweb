@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LogIn, PawPrint, User, Target, Trophy, Home } from 'lucide-react'
+import { LogIn, PawPrint, Target, Trophy, Home } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 
@@ -15,7 +16,7 @@ const NAV_ITEMS = [
 
 export default function Header() {
   const pathname = usePathname()
-  const { user, signOut, owner } = useAuth()
+  const { user, owner } = useAuth()
   const { openAuthModal } = useAuthModal()
 
   return (
@@ -55,21 +56,15 @@ export default function Header() {
                   {owner.totalPoints}pt
                 </span>
               )}
-              <Link
-                href="/profile"
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === '/profile' ? 'text-orange-500 bg-orange-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <User size={14} />
-                <span>マイページ</span>
+              <Link href="/profile">
+                <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold ring-2 transition-all ${pathname === '/profile' ? 'ring-orange-500' : 'ring-transparent hover:ring-orange-300'} ${owner?.photoUrl ? '' : 'bg-orange-100 text-orange-500'}`}>
+                  {owner?.photoUrl ? (
+                    <Image src={owner.photoUrl} alt="" width={32} height={32} className="object-cover w-full h-full" />
+                  ) : (
+                    owner?.displayName?.[0] ?? 'U'
+                  )}
+                </div>
               </Link>
-              <button
-                onClick={signOut}
-                className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                ログアウト
-              </button>
             </>
           ) : (
             <button
@@ -83,13 +78,23 @@ export default function Header() {
           )}
         </div>
 
-        {/* モバイル: ポイント表示 */}
-        {user && owner && (
-          <div className="lg:hidden">
-            <span className="text-xs text-orange-500 font-bold bg-orange-50 px-2 py-1 rounded-full">
-              {owner.totalPoints}pt
-            </span>
-          </div>
+        {/* モバイル: プロフアイコン */}
+        {user ? (
+          <Link href="/profile" className="lg:hidden">
+            <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold ring-2 transition-all ${pathname === '/profile' ? 'ring-orange-500' : 'ring-transparent'} ${owner?.photoUrl ? '' : 'bg-orange-100 text-orange-500'}`}>
+              {owner?.photoUrl ? (
+                <Image src={owner.photoUrl} alt="" width={32} height={32} className="object-cover w-full h-full" />
+              ) : (
+                owner?.displayName?.[0] ?? 'U'
+              )}
+            </div>
+          </Link>
+        ) : (
+          <button type="button" onClick={openAuthModal} className="lg:hidden">
+            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+              <LogIn size={16} className="text-gray-400" />
+            </div>
+          </button>
         )}
 
       </div>

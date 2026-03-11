@@ -37,6 +37,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // POSTリクエストはキャッシュ不可のためスキップ
+  if (request.method !== 'GET') return
+
   // Network first → キャッシュフォールバック
   event.respondWith(
     fetch(request)

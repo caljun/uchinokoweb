@@ -1,19 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { collection, getDocs, limit, query } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { useAuth } from '@/contexts/AuthContext'
 import { ExternalLink, Tag } from 'lucide-react'
-
-interface Recommendation {
-  id: string
-  title: string
-  description?: string
-  url: string
-  imageUrl?: string
-  category?: string
-  order?: number
-}
+import { recommendations, type Recommendation } from '@/data/recommendations'
 
 const CATEGORY_LABELS: Record<string, string> = {
   cafe: 'ドッグカフェ',
@@ -24,19 +16,39 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: 'その他',
 }
 
+const AGE_LABELS: Record<number, string> = {
+  0: 'パピー向け',
+  1: '成犬向け',
+  2: 'シニア向け',
+}
+
+function filterByAgeGroup(items: Recommendation[], ageGroup: number | null): Recommendation[] {
+  if (ageGroup === null) return items.filter((item) => !item.targetAgeGroups)
+  return items.filter(
+    (item) => !item.targetAgeGroups || item.targetAgeGroups.includes(ageGroup)
+  )
+}
+
 export default function HomePage() {
-  const [items, setItems] = useState<Recommendation[]>([])
+  const { user } = useAuth()
+  const [dogAgeGroup, setDogAgeGroup] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getDocs(query(collection(db, 'recommendations'), orderBy('order', 'asc')))
-      .catch(() => getDocs(collection(db, 'recommendations')))
+    if (!user) { setLoading(false); return }
+    getDocs(query(collection(db, 'owners', user.uid, 'dogs'), limit(1)))
       .then((snap) => {
-        setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Recommendation)))
+        if (!snap.empty) {
+          const data = snap.docs[0].data()
+          const ag = data.ageGroup
+          setDogAgeGroup(typeof ag === 'number' ? ag : null)
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [user])
+
+  const items = filterByAgeGroup(recommendations, dogAgeGroup)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,11 +99,16 @@ export default function HomePage() {
                   </div>
                 )}
                 <div className="p-4">
-                  {item.category && (
-                    <span className="inline-block text-xs font-medium text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full mb-2">
+                  <div className="flex gap-2 mb-2">
+                    <span className="inline-block text-xs font-medium text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">
                       {CATEGORY_LABELS[item.category] ?? item.category}
                     </span>
-                  )}
+                    {item.targetAgeGroups?.map((ag) => (
+                      <span key={ag} className="inline-block text-xs font-medium text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                        {AGE_LABELS[ag]}
+                      </span>
+                    ))}
+                  </div>
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="text-base font-bold text-gray-900 leading-snug">{item.title}</h2>
                     <ExternalLink size={16} className="text-gray-400 shrink-0 mt-0.5" />
