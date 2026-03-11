@@ -36,7 +36,6 @@ export default function Footer() {
             <p className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">マイページ</p>
             <ul className="space-y-2">
               <li><Link href="/profile" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">プロフィール</Link></li>
-              <li><Link href="/profile/favorites" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">お気に入り</Link></li>
               <li><Link href="/profile/orders" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">注文履歴</Link></li>
             </ul>
           </div>
