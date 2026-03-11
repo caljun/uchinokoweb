@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { doc, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '@/lib/firebase'
+import { EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth'
+import { db, storage, auth } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { ArrowLeft, ChevronRight, X, Camera } from 'lucide-react'
 
@@ -13,14 +14,11 @@ export default function ProfileSettingsPage() {
   const { user, owner, signOut, reloadOwner } = useAuth()
   const router = useRouter()
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
     router.replace('/uchinoko')
-  }
-
-  const handleDeleteAccount = () => {
-    alert('アカウント削除は現在準備中です。')
   }
 
   if (!user) {
@@ -57,7 +55,7 @@ export default function ProfileSettingsPage() {
             ログアウト
           </button>
           <button
-            onClick={handleDeleteAccount}
+            onClick={() => setShowDeleteModal(true)}
             className="w-full flex items-center gap-3 px-5 py-4 text-gray-400 hover:bg-gray-50 transition-colors text-sm font-medium"
           >
             アカウント削除
@@ -73,6 +71,95 @@ export default function ProfileSettingsPage() {
           onClose={() => setShowEditModal(false)}
         />
       )}
+
+      {showDeleteModal && (
+        <DeleteAccountModal
+          userEmail={user.email ?? ''}
+          onClose={() => setShowDeleteModal(false)}
+          onDeleted={() => router.replace('/uchinoko')}
+        />
+      )}
+    </div>
+  )
+}
+
+function DeleteAccountModal({
+  userEmail,
+  onClose,
+  onDeleted,
+}: {
+  userEmail: string
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const [password, setPassword] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  const handleDelete = async () => {
+    if (!password.trim()) { setError('パスワードを入力してください'); return }
+    setDeleting(true)
+    setError('')
+    try {
+      const currentUser = auth.currentUser
+      if (!currentUser) throw new Error('not logged in')
+      const credential = EmailAuthProvider.credential(userEmail, password)
+      await reauthenticateWithCredential(currentUser, credential)
+      await deleteDoc(doc(db, 'owners', currentUser.uid))
+      await deleteUser(currentUser)
+      onDeleted()
+    } catch (e: unknown) {
+      const code = (e as { code?: string }).code
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setError('パスワードが違います')
+      } else {
+        setError('削除に失敗しました。もう一度お試しください')
+      }
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-sm bg-white rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">アカウント削除</h2>
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="px-5 py-6 space-y-4">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            アカウントを削除すると、すべてのデータが失われます。この操作は取り消せません。
+          </p>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">パスワードを入力して確認</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="パスワード"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 bg-white text-gray-800 text-sm"
+            />
+          </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="w-full py-3 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50"
+          >
+            {deleting ? '削除中...' : 'アカウントを削除する'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
