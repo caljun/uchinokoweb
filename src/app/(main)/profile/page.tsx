@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dog } from '@/types/dog'
-import { PawPrint, UserPlus, Settings, ChevronRight, Plus } from 'lucide-react'
+import { PawPrint, UserPlus, Settings, ChevronRight, Plus, Copy, Check } from 'lucide-react'
 
 interface FriendEntry {
   uid: string
@@ -19,6 +19,7 @@ interface FriendEntry {
 export default function ProfilePage() {
   const { user, owner } = useAuth()
   const { openAuthModal } = useAuthModal()
+  const [copied, setCopied] = useState(false)
   const [dogs, setDogs] = useState<Dog[]>([])
   const [loadingDogs, setLoadingDogs] = useState(true)
 
@@ -104,7 +105,19 @@ export default function ProfilePage() {
           {/* 名前・ポイント */}
           <div className="flex-1 min-w-0">
             <p className="text-xl font-bold text-gray-900 truncate">{owner?.displayName ?? 'オーナー'}</p>
-            <p className="text-sm text-gray-400 truncate mt-0.5">ID: {owner?.friendId ?? '—'}</p>
+            <button
+              type="button"
+              onClick={() => {
+                if (!owner?.friendId) return
+                navigator.clipboard.writeText(owner.friendId)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }}
+              className="flex items-center gap-1 mt-0.5 text-sm text-gray-400 hover:text-orange-500 transition-colors"
+            >
+              <span>ID: {owner?.friendId ?? '—'}</span>
+              {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+            </button>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs text-orange-500 font-bold bg-orange-50 px-2.5 py-1 rounded-full">
                 {owner?.totalPoints ?? 0}pt

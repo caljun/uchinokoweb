@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth'
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, getDocs, query, limit,
+  collection, getDocs, query, limit, where,
   increment, runTransaction,
 } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
@@ -48,7 +48,7 @@ interface AuthContextType {
   hasDog: boolean | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, displayName: string) => Promise<void>
+  signUp: (email: string, password: string, displayName: string, referralCode?: string) => Promise<void>
   signOut: () => Promise<void>
   reloadOwner: () => Promise<void>
   setHasDog: (v: boolean) => void
@@ -166,18 +166,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password)
   }
 
-  const signUp = async (email: string, password: string, displayName: string) => {
+  const signUp = async (email: string, password: string, displayName: string, referralCode?: string) => {
     const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password)
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     const friendId = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+
+    let referredBy: string | null = null
+    let newUserPoints = 0
+
+    if (referralCode) {
+      try {
+        const snap = await getDocs(query(collection(db, 'owners'), where('friendId', '==', referralCode)))
+        if (!snap.empty) {
+          const referrerDoc = snap.docs[0]
+          referredBy = referrerDoc.id
+          await updateDoc(doc(db, 'owners', referrerDoc.id), { totalPoints: increment(100) })
+          newUserPoints = 100
+        }
+      } catch {}
+    }
+
     await setDoc(doc(db, 'owners', newUser.uid), {
       email,
       displayName,
       friendId,
-      totalPoints: 0,
+      totalPoints: newUserPoints,
       weeklyPoints: 0,
       weeklyPointsWeekStr: getCurrentWeekStr(),
       createdAt: serverTimestamp(),
+      ...(referredBy && { referredBy }),
     })
   }
 

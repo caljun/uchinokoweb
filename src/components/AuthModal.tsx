@@ -12,6 +12,7 @@ export default function AuthModal() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [referralCode, setReferralCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -23,7 +24,7 @@ export default function AuthModal() {
       if (isLogin) {
         await signIn(email, password)
       } else {
-        await signUp(email, password, displayName)
+        await signUp(email, password, displayName, referralCode.trim().toUpperCase() || undefined)
       }
       closeAuthModal()
     } catch (err: unknown) {
@@ -126,6 +127,21 @@ export default function AuthModal() {
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white text-sm"
               />
             </div>
+
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">招待コード（任意）</label>
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                  maxLength={6}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white text-sm uppercase tracking-widest"
+                />
+                <p className="text-xs text-gray-400 mt-1">友達の招待コードを入力するとお互いに100ptもらえます</p>
+              </div>
+            )}
 
             {error && (
               <p className="text-red-500 text-sm text-center">{error}</p>
