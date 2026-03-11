@@ -189,8 +189,8 @@ export default function RankingPage() {
       </div>
 
       {/* タブ */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex gap-8">
+      <div className="bg-white border-b border-gray-200">
+        <div className="flex">
           {([
             { key: 'global' as ActiveTab, label: '全体' },
             { key: 'friends' as ActiveTab, label: '友達' },
@@ -198,7 +198,7 @@ export default function RankingPage() {
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === key
                   ? 'border-orange-500 text-orange-500'
                   : 'border-transparent text-gray-500 hover:text-gray-700'

@@ -213,8 +213,8 @@ export default function FriendsPage() {
       </div>
 
       {/* タブ */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex gap-6">
+      <div className="bg-white border-b border-gray-200">
+        <div className="flex">
           {([
             { key: 'search' as ActiveTab, label: '検索' },
             { key: 'requests' as ActiveTab, label: '申請' },
@@ -223,7 +223,7 @@ export default function FriendsPage() {
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === key
                   ? 'border-orange-500 text-orange-500'
                   : 'border-transparent text-gray-500 hover:text-gray-700'

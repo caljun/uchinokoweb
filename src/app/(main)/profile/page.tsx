@@ -3,18 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { collection, query, orderBy, getDocs, where, limit } from 'firebase/firestore'
+import { collection, query, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dog } from '@/types/dog'
 import { PawPrint, UserPlus, Settings, ChevronRight, Plus, Copy, Check } from 'lucide-react'
-
-interface FriendEntry {
-  uid: string
-  displayName: string
-  photoUrl?: string
-}
 
 export default function ProfilePage() {
   const { user, owner } = useAuth()
@@ -23,10 +17,6 @@ export default function ProfilePage() {
   const [dogs, setDogs] = useState<Dog[]>([])
   const [loadingDogs, setLoadingDogs] = useState(true)
 
-  const [pendingCount, setPendingCount] = useState(0)
-  const [friends, setFriends] = useState<FriendEntry[]>([])
-  const [loadingFriends, setLoadingFriends] = useState(true)
-
   useEffect(() => {
     if (!user) return
     getDocs(query(collection(db, 'owners', user.uid, 'dogs'), orderBy('createdAt', 'desc')))
@@ -34,41 +24,6 @@ export default function ProfilePage() {
         setDogs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Dog)))
         setLoadingDogs(false)
       })
-  }, [user])
-
-  useEffect(() => {
-    if (!user) return
-
-    // 申請件数
-    getDocs(
-      query(
-        collection(db, 'friendRequests'),
-        where('toUid', '==', user.uid),
-        where('status', '==', 'pending'),
-      )
-    )
-      .then((snap) => setPendingCount(snap.size))
-      .catch(() => {})
-
-    // 友達一覧（最大5件）
-    getDocs(
-      query(
-        collection(db, 'owners', user.uid, 'friends'),
-        orderBy('since', 'desc'),
-        limit(5),
-      )
-    )
-      .then((snap) => {
-        setFriends(
-          snap.docs.map((d) => ({
-            uid: d.id,
-            displayName: (d.data().displayName as string) ?? 'オーナー',
-            photoUrl: d.data().photoUrl as string | undefined,
-          }))
-        )
-        setLoadingFriends(false)
-      })
-      .catch(() => { setLoadingFriends(false) })
   }, [user])
 
   if (!user) {
@@ -187,76 +142,17 @@ export default function ProfilePage() {
 
         {/* 友達 */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-700">友達</h2>
-            <Link href="/profile/friends" className="text-xs text-orange-500 font-medium hover:underline">
-              すべて見る
-            </Link>
-          </div>
-
-          <div className="bg-white rounded-xl overflow-hidden">
-            {/* 申請通知 */}
-            {pendingCount > 0 && (
-              <Link
-                href="/profile/friends"
-                className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 hover:bg-red-50 transition-colors"
-              >
-                <span className="flex-1 text-sm font-medium text-red-600">
-                  申請が{pendingCount}件届いています
-                </span>
-                <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                  {pendingCount}
-                </span>
-                <ChevronRight size={16} className="text-red-300" />
-              </Link>
-            )}
-
-            {/* 友達招待 */}
-            <Link
-              href="/profile/friends"
-              className="flex items-center gap-3 px-5 py-4 border-b border-gray-50 hover:bg-orange-50 transition-colors"
-            >
-              <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <UserPlus size={18} className="text-orange-500" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-gray-800">友達を探す</p>
-              </div>
-              <ChevronRight size={16} className="text-gray-300" />
-            </Link>
-
-            {/* 友達リスト */}
-            {loadingFriends ? (
-              <div className="px-5 py-4 flex gap-3 overflow-x-auto">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full bg-gray-200 animate-pulse" />
-                    <div className="h-3 w-10 bg-gray-200 rounded animate-pulse" />
-                  </div>
-                ))}
-              </div>
-            ) : friends.length === 0 ? (
-              <div className="px-5 py-8 flex flex-col items-center gap-2 text-gray-400">
-                <p className="text-sm">まだ友達がいません</p>
-                <p className="text-xs">友達を招待してポイントをもらおう</p>
-              </div>
-            ) : (
-              <div className="px-5 py-4 flex gap-4 overflow-x-auto pb-4">
-                {friends.map((friend) => (
-                  <div key={friend.uid} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-100 flex items-center justify-center text-base font-bold text-orange-500">
-                      {friend.photoUrl ? (
-                        <img src={friend.photoUrl} alt={friend.displayName} className="w-full h-full object-cover" />
-                      ) : (
-                        <span>{friend.displayName?.[0] ?? 'U'}</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-600 truncate max-w-[48px]">{friend.displayName}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <h2 className="text-sm font-bold text-gray-700 mb-3">友達</h2>
+          <Link
+            href="/profile/friends"
+            className="bg-white rounded-xl flex items-center gap-3 px-5 py-4 hover:bg-orange-50 transition-colors"
+          >
+            <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <UserPlus size={18} className="text-orange-500" />
+            </div>
+            <p className="flex-1 text-sm font-medium text-gray-800">友達を探す・管理する</p>
+            <ChevronRight size={16} className="text-gray-300" />
+          </Link>
         </section>
 
       </div>
