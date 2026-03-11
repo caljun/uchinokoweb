@@ -22,20 +22,23 @@ const AGE_LABELS: Record<number, string> = {
   2: 'シニア向け',
 }
 
-function filterByAgeGroup(items: Recommendation[], ageGroup: number | null): Recommendation[] {
-  if (ageGroup === null) return items.filter((item) => !item.targetAgeGroups)
-  return items.filter(
-    (item) => !item.targetAgeGroups || item.targetAgeGroups.includes(ageGroup)
-  )
+function sortByAgeGroup(items: Recommendation[], ageGroup: number | null): Recommendation[] {
+  if (ageGroup === null) return items
+  return [...items].sort((a, b) => {
+    const aMatch = !a.targetAgeGroups || a.targetAgeGroups.includes(ageGroup) ? 0 : 1
+    const bMatch = !b.targetAgeGroups || b.targetAgeGroups.includes(ageGroup) ? 0 : 1
+    return aMatch - bMatch
+  })
 }
 
 export default function HomePage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [dogAgeGroup, setDogAgeGroup] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [dogLoading, setDogLoading] = useState(false)
 
   useEffect(() => {
-    if (!user) { setLoading(false); return }
+    if (!user) return
+    setDogLoading(true)
     getDocs(query(collection(db, 'owners', user.uid, 'dogs'), limit(1)))
       .then((snap) => {
         if (!snap.empty) {
@@ -45,10 +48,12 @@ export default function HomePage() {
         }
       })
       .catch(() => {})
-      .finally(() => setLoading(false))
+      .finally(() => setDogLoading(false))
   }, [user])
 
-  const items = filterByAgeGroup(recommendations, dogAgeGroup)
+  const loading = authLoading || dogLoading
+
+  const items = sortByAgeGroup(recommendations, dogAgeGroup)
 
   return (
     <div className="min-h-screen bg-gray-50">
