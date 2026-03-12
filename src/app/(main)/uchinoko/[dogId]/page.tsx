@@ -52,6 +52,7 @@ export default function UchinokoDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showHealthModal, setShowHealthModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; comment?: string; createdAt?: unknown } | null>(null)
   const touchStartX = useRef<number | null>(null)
 
   const handleInvite = async () => {
@@ -302,14 +303,19 @@ export default function UchinokoDetailPage() {
                 return (
                   <div className="grid grid-cols-2 gap-1">
                     {allPhotos.map((photo, i) => (
-                      <div key={i} className="relative aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden">
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setSelectedPhoto(photo)}
+                        className="relative aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden"
+                      >
                         <Image
                           src={photo.url}
                           alt={`photo ${i}`}
                           fill
                           className="object-cover"
                         />
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )
@@ -359,6 +365,42 @@ export default function UchinokoDetailPage() {
             </div>
           )}
         </div>
+
+        {/* 写真詳細モーダル */}
+        {selectedPhoto && (
+          <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
+            <button
+              type="button"
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute top-4 right-4 z-10 w-9 h-9 bg-black/50 rounded-full flex items-center justify-center text-white text-xl"
+            >
+              ×
+            </button>
+            <div className="flex-1 relative" onClick={() => setSelectedPhoto(null)}>
+              <Image
+                src={selectedPhoto.url}
+                alt=""
+                fill
+                className="object-contain"
+                sizes="100vw"
+              />
+            </div>
+            <div className="px-5 py-4 bg-black/80">
+              {(() => {
+                const raw = selectedPhoto.createdAt
+                const date = raw instanceof Date
+                  ? raw
+                  : (raw as { toDate?: () => Date })?.toDate?.()
+                return date ? (
+                  <p className="text-xs text-gray-400 mb-1">{date.toLocaleDateString('ja-JP')}</p>
+                ) : null
+              })()}
+              {selectedPhoto.comment && (
+                <p className="text-white text-sm">{selectedPhoto.comment}</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* シェアカードモーダル */}
         {showShareModal && (
