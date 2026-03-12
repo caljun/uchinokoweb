@@ -8,12 +8,24 @@ import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dog } from '@/types/dog'
-import { PawPrint, UserPlus, Settings, ChevronRight, Plus, Copy, Check } from 'lucide-react'
+import { PawPrint, UserPlus, Settings, ChevronRight, Plus, Copy, Check, Share2 } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, owner } = useAuth()
   const { openAuthModal } = useAuthModal()
   const [copied, setCopied] = useState(false)
+
+  const handleShareInvite = async () => {
+    if (!owner?.friendId) return
+    const url = `${window.location.origin}/auth?ref=${owner.friendId}`
+    if (navigator.share) {
+      await navigator.share({ title: 'ウチの子に招待！', text: 'いっしょにやろう🐾', url })
+    } else {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
   const [dogs, setDogs] = useState<Dog[]>([])
   const [loadingDogs, setLoadingDogs] = useState(true)
 
@@ -143,16 +155,31 @@ export default function ProfilePage() {
         {/* 友達 */}
         <section>
           <h2 className="text-sm font-bold text-gray-700 mb-3">友達</h2>
-          <Link
-            href="/profile/friends"
-            className="bg-white rounded-xl flex items-center gap-3 px-5 py-4 hover:bg-orange-50 transition-colors"
-          >
-            <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <UserPlus size={18} className="text-orange-500" />
-            </div>
-            <p className="flex-1 text-sm font-medium text-gray-800">友達を探す・管理する</p>
-            <ChevronRight size={16} className="text-gray-300" />
-          </Link>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={handleShareInvite}
+              className="w-full bg-orange-500 rounded-xl flex items-center gap-3 px-5 py-4 hover:bg-orange-600 transition-colors"
+            >
+              <div className="w-9 h-9 bg-orange-400 rounded-full flex items-center justify-center flex-shrink-0">
+                <Share2 size={18} className="text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-bold text-white">友達を招待する</p>
+                <p className="text-xs text-orange-100 mt-0.5">招待するとお互いに100ptもらえる</p>
+              </div>
+            </button>
+            <Link
+              href="/profile/friends"
+              className="bg-white rounded-xl flex items-center gap-3 px-5 py-4 hover:bg-orange-50 transition-colors"
+            >
+              <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <UserPlus size={18} className="text-orange-500" />
+              </div>
+              <p className="flex-1 text-sm font-medium text-gray-800">友達を探す・管理する</p>
+              <ChevronRight size={16} className="text-gray-300" />
+            </Link>
+          </div>
         </section>
 
       </div>
