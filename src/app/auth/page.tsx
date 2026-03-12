@@ -1,18 +1,28 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
-export default function AuthPage() {
+function AuthPageContent() {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [referralCode, setReferralCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn, signUp } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const ref = searchParams.get('ref')
+    if (ref) {
+      setReferralCode(ref.toUpperCase())
+      setIsLogin(false)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,7 +32,7 @@ export default function AuthPage() {
       if (isLogin) {
         await signIn(email, password)
       } else {
-        await signUp(email, password, displayName)
+        await signUp(email, password, displayName, referralCode.trim().toUpperCase() || undefined)
       }
       router.replace('/uchinoko')
     } catch (err: unknown) {
@@ -103,6 +113,21 @@ export default function AuthPage() {
           />
         </div>
 
+        {!isLogin && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">招待コード（任意）</label>
+            <input
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              placeholder="ABC123"
+              maxLength={6}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white uppercase tracking-widest"
+            />
+            <p className="text-xs text-gray-400 mt-1">友達の招待コードを入力するとお互いに100ptもらえます</p>
+          </div>
+        )}
+
         {error && (
           <p className="text-red-500 text-sm text-center">{error}</p>
         )}
@@ -116,5 +141,13 @@ export default function AuthPage() {
         </button>
       </form>
     </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-gray-400">読み込み中...</div></div>}>
+      <AuthPageContent />
+    </Suspense>
   )
 }

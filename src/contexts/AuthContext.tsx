@@ -10,10 +10,11 @@ import {
 } from 'firebase/auth'
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, getDocs, query, limit, where,
+  collection, getDocs, query, limit,
   increment, runTransaction,
 } from 'firebase/firestore'
-import { auth, db } from '@/lib/firebase'
+import { httpsCallable } from 'firebase/functions'
+import { auth, db, functions } from '@/lib/firebase'
 
 export interface OwnerProfile {
   uid: string
@@ -171,31 +172,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     const friendId = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 
-    let referredBy: string | null = null
-    let newUserPoints = 0
-
-    if (referralCode) {
-      try {
-        const snap = await getDocs(query(collection(db, 'owners'), where('friendId', '==', referralCode)))
-        if (!snap.empty) {
-          const referrerDoc = snap.docs[0]
-          referredBy = referrerDoc.id
-          await updateDoc(doc(db, 'owners', referrerDoc.id), { totalPoints: increment(100) })
-          newUserPoints = 100
-        }
-      } catch {}
-    }
-
     await setDoc(doc(db, 'owners', newUser.uid), {
       email,
       displayName,
       friendId,
-      totalPoints: newUserPoints,
+      totalPoints: 0,
       weeklyPoints: 0,
       weeklyPointsWeekStr: getCurrentWeekStr(),
       createdAt: serverTimestamp(),
-      ...(referredBy && { referredBy }),
     })
+
+    // referralCodes にエントリを作成（CF が1発で紹介者を取得できるよう）
+    await setDoc(doc(db, 'referralCodes', friendId), { ownerUid: newUser.uid })
+
+    // 紹介コードがあれば CF に処理を委譲（失敗してもサインアップは成功させる）
+    if (referralCode) {
+      try {
+        const processReferral = httpsCallable(functions, 'processReferral')
+        await processReferral({ referralCode: referralCode.trim().toUpperCase() })
+      } catch {}
+    }
   }
 
   const signOut = async () => {
