@@ -10,6 +10,7 @@ function AuthPageContent() {
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [referralCode, setReferralCode] = useState('')
+  const [referrerDogId, setReferrerDogId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn, signUp, user, loading: authLoading } = useAuth()
@@ -24,10 +25,12 @@ function AuthPageContent() {
 
   useEffect(() => {
     const ref = searchParams.get('ref')
+    const forDog = searchParams.get('for')
     if (ref) {
       setReferralCode(ref.toUpperCase())
       setIsLogin(false)
     }
+    if (forDog) setReferrerDogId(forDog)
   }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,7 +41,7 @@ function AuthPageContent() {
       if (isLogin) {
         await signIn(email, password)
       } else {
-        await signUp(email, password, displayName, referralCode.trim().toUpperCase() || undefined)
+        await signUp(email, password, displayName, referralCode.trim().toUpperCase() || undefined, referrerDogId || undefined)
       }
       router.replace('/uchinoko')
     } catch (err: unknown) {

@@ -41,6 +41,7 @@ export interface OwnerProfile {
   weeklyPointsWeekStr?: string
   primaryDogName?: string
   friendId?: string
+  pendingPoints?: number
 }
 
 interface AuthContextType {
@@ -49,7 +50,7 @@ interface AuthContextType {
   hasDog: boolean | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, displayName: string, referralCode?: string) => Promise<void>
+  signUp: (email: string, password: string, displayName: string, referralCode?: string, referrerDogId?: string) => Promise<void>
   signOut: () => Promise<void>
   reloadOwner: () => Promise<void>
   setHasDog: (v: boolean) => void
@@ -97,6 +98,7 @@ function parseOwner(uid: string, data: Record<string, unknown>): OwnerProfile {
     weeklyPointsWeekStr: data.weeklyPointsWeekStr as string | undefined,
     primaryDogName: data.primaryDogName as string | undefined,
     friendId: data.friendId as string | undefined,
+    pendingPoints: (data.pendingPoints as number) || undefined,
   }
 }
 
@@ -167,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password)
   }
 
-  const signUp = async (email: string, password: string, displayName: string, referralCode?: string) => {
+  const signUp = async (email: string, password: string, displayName: string, referralCode?: string, referrerDogId?: string) => {
     const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password)
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     const friendId = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
@@ -189,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (referralCode) {
       try {
         const processReferral = httpsCallable(functions, 'processReferral')
-        await processReferral({ referralCode: referralCode.trim().toUpperCase() })
+        await processReferral({ referralCode: referralCode.trim().toUpperCase(), dogId: referrerDogId ?? '' })
       } catch {}
     }
   }

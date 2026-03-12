@@ -8,7 +8,7 @@ import { doc, getDoc, collection, query, orderBy, getDocs, addDoc, serverTimesta
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Dog, Diary, HealthRecord } from '@/types/dog'
-import { Pencil, Share2, Target } from 'lucide-react'
+import { Pencil, Share2, Target, UserPlus } from 'lucide-react'
 import { ShareCardsModal } from '@/components/share/ShareCardsModal'
 import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
 
@@ -42,7 +42,7 @@ function getTemperamentDescription(type: string): string {
 
 export default function UchinokoDetailPage() {
   const { dogId } = useParams<{ dogId: string }>()
-  const { user } = useAuth()
+  const { user, owner } = useAuth()
   const router = useRouter()
   const [dog, setDog] = useState<Dog | null>(null)
   const [diaries, setDiaries] = useState<Diary[]>([])
@@ -53,6 +53,16 @@ export default function UchinokoDetailPage() {
   const [showHealthModal, setShowHealthModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const touchStartX = useRef<number | null>(null)
+
+  const handleInvite = async () => {
+    if (!owner?.friendId || !dog) return
+    const url = `${window.location.origin}/auth?ref=${owner.friendId}&for=${dogId}`
+    if (navigator.share) {
+      await navigator.share({ title: `${dog.name}と一緒にウチの子やろう🐾`, url })
+    } else {
+      await navigator.clipboard.writeText(url)
+    }
+  }
 
   useEffect(() => {
     if (!user || !dogId) return
@@ -107,6 +117,13 @@ export default function UchinokoDetailPage() {
                 >
                   <Share2 size={14} />
                   シェア
+                </button>
+                <button
+                  onClick={handleInvite}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600 transition-colors"
+                >
+                  <UserPlus size={14} />
+                  招待
                 </button>
                 <Link
                   href={`/uchinoko/${dogId}/edit`}

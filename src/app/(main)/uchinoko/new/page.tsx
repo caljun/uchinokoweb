@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, doc, runTransaction, increment } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -81,7 +81,7 @@ export default function UchinokoNewPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { user } = useAuth()
+  const { user, owner, reloadOwner } = useAuth()
   const router = useRouter()
 
   const set = (key: keyof FormData, value: unknown) =>
@@ -146,8 +146,25 @@ export default function UchinokoNewPage() {
         const storageRef = ref(storage, `owners/${user.uid}/dogs/${docRef.id}/profile.jpg`)
         await uploadBytes(storageRef, form.photo)
         const photoUrl = await getDownloadURL(storageRef)
-        const { doc, updateDoc } = await import('firebase/firestore')
-        await updateDoc(doc(db, 'owners', user.uid, 'dogs', docRef.id), { photoUrl })
+        const { doc: docFn, updateDoc } = await import('firebase/firestore')
+        await updateDoc(docFn(db, 'owners', user.uid, 'dogs', docRef.id), { photoUrl })
+      }
+
+      // 招待ボーナスのpendingPointsがあればこの犬に付与
+      if (owner?.pendingPoints && owner.pendingPoints > 0) {
+        await runTransaction(db, async (tx) => {
+          const ownerRef = doc(db, 'owners', user.uid)
+          const ownerSnap = await tx.get(ownerRef)
+          const pending = (ownerSnap.data()?.pendingPoints as number) ?? 0
+          if (pending > 0) {
+            tx.update(doc(db, 'owners', user.uid, 'dogs', docRef.id), {
+              totalPoints: increment(pending),
+              weeklyPoints: increment(pending),
+            })
+            tx.update(ownerRef, { pendingPoints: 0 })
+          }
+        })
+        await reloadOwner()
       }
 
       router.push(`/uchinoko/${docRef.id}`)
