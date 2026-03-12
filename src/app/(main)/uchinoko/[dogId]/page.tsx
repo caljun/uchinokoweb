@@ -57,8 +57,25 @@ export default function UchinokoDetailPage() {
   const handleInvite = async () => {
     if (!owner?.friendId || !dog) return
     const url = `${window.location.origin}/auth?ref=${owner.friendId}&for=${dogId}`
+    const title = `${dog.name}と一緒にウチの子やろう🐾`
+    const text = `${dog.name}と一緒に犬育てゲームを始めよう！招待リンクはこちら👇`
+
+    // 写真があればファイルとして一緒に共有（Web Share API Level 2）
+    if (dog.photoUrl && navigator.share) {
+      try {
+        const res = await fetch(dog.photoUrl)
+        const blob = await res.blob()
+        const file = new File([blob], `${dog.name}.jpg`, { type: blob.type })
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ title, text, url, files: [file] })
+          return
+        }
+      } catch {}
+    }
+
+    // フォールバック: 写真なしで共有
     if (navigator.share) {
-      await navigator.share({ title: `${dog.name}と一緒にウチの子やろう🐾`, url })
+      await navigator.share({ title, text, url })
     } else {
       await navigator.clipboard.writeText(url)
     }
