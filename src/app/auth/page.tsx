@@ -12,9 +12,15 @@ function AuthPageContent() {
   const [referralCode, setReferralCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, user, loading: authLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/uchinoko')
+    }
+  }, [user, authLoading, router])
 
   useEffect(() => {
     const ref = searchParams.get('ref')
