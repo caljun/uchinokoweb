@@ -58,7 +58,7 @@ export default function UchinokoDetailPage() {
     if (!owner?.friendId || !dog) return
     const url = `${window.location.origin}/auth?ref=${owner.friendId}&for=${dogId}`
     const title = `${dog.name}と一緒にウチの子やろう🐾`
-    const text = `${dog.name}と一緒に犬育てゲームを始めよう！招待リンクはこちら👇`
+    const text = `${dog.name}が待ってるよ🐾 一緒にウチの子はじめよう！`
 
     // 写真があればファイルとして一緒に共有（Web Share API Level 2）
     if (dog.photoUrl && navigator.share) {
