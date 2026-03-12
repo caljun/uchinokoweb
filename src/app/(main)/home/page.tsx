@@ -1,11 +1,24 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, getDocs, query } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, doc, increment, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { ExternalLink, Tag } from 'lucide-react'
-import { recommendations, type Recommendation } from '@/data/recommendations'
+
+interface Recommendation {
+  id: string
+  title: string
+  description?: string
+  imageUrl?: string
+  url: string
+  category: string
+  tapCount?: number
+  isActive?: boolean
+  order?: number
+  targetAgeGroups?: number[] | null
+  targetSizes?: number[] | null
+}
 
 const CATEGORY_LABELS: Record<string, string> = {
   cafe: 'ドッグカフェ',
@@ -63,16 +76,17 @@ export default function HomePage() {
   const [dogs, setDogs] = useState<DogProfile[]>([])
   const [selectedDogId, setSelectedDogId] = useState<string | null>(null)
   const [dogLoading, setDogLoading] = useState(false)
+  const [allRecommendations, setAllRecommendations] = useState<Recommendation[]>([])
 
   useEffect(() => {
     if (!user) return
     setDogLoading(true)
     getDocs(query(collection(db, 'owners', user.uid, 'dogs')))
       .then((snap) => {
-        const list: DogProfile[] = snap.docs.map((doc) => {
-          const data = doc.data()
+        const list: DogProfile[] = snap.docs.map((d) => {
+          const data = d.data()
           return {
-            id: doc.id,
+            id: d.id,
             name: data.name ?? 'うちの子',
             photoUrl: data.photos?.[0] ?? data.photoUrl ?? undefined,
             ageGroup: typeof data.ageGroup === 'number' ? data.ageGroup : null,
@@ -86,10 +100,25 @@ export default function HomePage() {
       .finally(() => setDogLoading(false))
   }, [user])
 
+  useEffect(() => {
+    getDocs(query(collection(db, 'recommendations'), orderBy('order', 'asc')))
+      .then((snap) => {
+        const list = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as Recommendation))
+          .filter((r) => r.isActive !== false)
+        setAllRecommendations(list)
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleTap = (item: Recommendation) => {
+    updateDoc(doc(db, 'recommendations', item.id), { tapCount: increment(1) }).catch(() => {})
+  }
+
   const loading = authLoading || dogLoading
 
   const selectedDog = dogs.find((d) => d.id === selectedDogId) ?? null
-  const items = sortByDogProfile(recommendations, selectedDog?.ageGroup ?? null, selectedDog?.breedSize ?? null)
+  const items = sortByDogProfile(allRecommendations, selectedDog?.ageGroup ?? null, selectedDog?.breedSize ?? null)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,6 +181,7 @@ export default function HomePage() {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => handleTap(item)}
                 className="flex bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow active:scale-[0.99]"
               >
                 <div className="w-24 h-24 shrink-0 bg-gray-100 overflow-hidden">
