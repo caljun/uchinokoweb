@@ -74,6 +74,56 @@ export default function MissionsPage() {
   const [isWeeklyActive, setIsWeeklyActive] = useState(false)
   const [dogsLoading, setDogsLoading] = useState(true)
   const [shareModal, setShareModal] = useState<{ photoUrl: string; missionTitle: string } | null>(null)
+  const [shareFile, setShareFile] = useState<File | null>(null)
+
+  // モーダルが開いたら事前に画像合成（ボタン押下時に即shareできるよう）
+  useEffect(() => {
+    if (!shareModal) { setShareFile(null); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const size = 1080
+        const canvas = document.createElement('canvas')
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext('2d')!
+
+        // image-proxy 経由でCORSを回避
+        const photoBlob = await fetch(`/api/image-proxy?url=${encodeURIComponent(shareModal.photoUrl)}`).then((r) => r.blob())
+        const photoBitmap = await createImageBitmap(photoBlob)
+        const scale = Math.max(size / photoBitmap.width, size / photoBitmap.height)
+        const w = photoBitmap.width * scale
+        const h = photoBitmap.height * scale
+        ctx.drawImage(photoBitmap, (size - w) / 2, (size - h) / 2, w, h)
+
+        // 下部グラデーション
+        const grad = ctx.createLinearGradient(0, size - 200, 0, size)
+        grad.addColorStop(0, 'rgba(0,0,0,0)')
+        grad.addColorStop(1, 'rgba(0,0,0,0.7)')
+        ctx.fillStyle = grad
+        ctx.fillRect(0, size - 200, size, 200)
+
+        // 「ミッションクリア！」テキスト
+        ctx.fillStyle = '#ffffff'
+        ctx.font = 'bold 64px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('ミッションクリア！', size / 2, size - 48)
+
+        // ロゴ（左上）
+        const logoBlob = await fetch('/icon-192.png').then((r) => r.blob())
+        const logoBitmap = await createImageBitmap(logoBlob)
+        ctx.drawImage(logoBitmap, 28, 28, 80, 80)
+
+        const file = await new Promise<File>((resolve, reject) =>
+          canvas.toBlob((blob) => blob ? resolve(new File([blob], 'mission.jpg', { type: 'image/jpeg' })) : reject(), 'image/jpeg', 0.92)
+        )
+        if (!cancelled) setShareFile(file)
+      } catch {
+        // 生成失敗は無視
+      }
+    })()
+    return () => { cancelled = true }
+  }, [shareModal])
 
   // 犬一覧取得
   useEffect(() => {
@@ -287,47 +337,12 @@ export default function MissionsPage() {
               <p className="text-2xl font-black text-gray-900">ミッションクリア！🎉</p>
               <p className="text-sm text-gray-500 mt-1">「{shareModal.missionTitle}」達成</p>
               <button
+                disabled={!shareFile}
                 onClick={async () => {
+                  if (!shareFile) return
                   try {
-                    const size = 1080
-                    const canvas = document.createElement('canvas')
-                    canvas.width = size
-                    canvas.height = size
-                    const ctx = canvas.getContext('2d')!
-
-                    // fetchでblobとして取得（CORS canvas汚染を回避）
-                    const photoBlob = await fetch(shareModal.photoUrl).then((r) => r.blob())
-                    const photoBitmap = await createImageBitmap(photoBlob)
-                    const scale = Math.max(size / photoBitmap.width, size / photoBitmap.height)
-                    const w = photoBitmap.width * scale
-                    const h = photoBitmap.height * scale
-                    ctx.drawImage(photoBitmap, (size - w) / 2, (size - h) / 2, w, h)
-
-                    // 下部グラデーションバー
-                    const grad = ctx.createLinearGradient(0, size - 200, 0, size)
-                    grad.addColorStop(0, 'rgba(0,0,0,0)')
-                    grad.addColorStop(1, 'rgba(0,0,0,0.7)')
-                    ctx.fillStyle = grad
-                    ctx.fillRect(0, size - 200, size, 200)
-
-                    // 「ミッションクリア！」テキスト
-                    ctx.fillStyle = '#ffffff'
-                    ctx.font = 'bold 64px sans-serif'
-                    ctx.textAlign = 'center'
-                    ctx.fillText('ミッションクリア！', size / 2, size - 48)
-
-                    // うちの子ロゴ（左上）
-                    const logoBlob = await fetch('/icon-192.png').then((r) => r.blob())
-                    const logoBitmap = await createImageBitmap(logoBlob)
-                    ctx.drawImage(logoBitmap, 28, 28, 80, 80)
-
-                    // Fileとしてシェア
-                    const file = await new Promise<File>((resolve, reject) =>
-                      canvas.toBlob((blob) => blob ? resolve(new File([blob], 'mission.jpg', { type: 'image/jpeg' })) : reject(), 'image/jpeg', 0.92)
-                    )
-
-                    if (navigator.canShare?.({ files: [file] })) {
-                      await navigator.share({ files: [file], text: '#うちの子' })
+                    if (navigator.canShare?.({ files: [shareFile] })) {
+                      await navigator.share({ files: [shareFile], text: '#うちの子' })
                     } else {
                       await navigator.share({ text: 'ミッションクリア！ #うちの子' })
                     }
@@ -335,10 +350,10 @@ export default function MissionsPage() {
                     // キャンセル・非対応は無視
                   }
                 }}
-                className="mt-5 w-full flex items-center justify-center gap-2 py-4 bg-orange-500 hover:bg-orange-600 active:scale-[0.98] transition-all rounded-2xl text-white font-bold text-base"
+                className="mt-5 w-full flex items-center justify-center gap-2 py-4 bg-orange-500 hover:bg-orange-600 active:scale-[0.98] transition-all rounded-2xl text-white font-bold text-base disabled:opacity-50"
               >
                 <Share2 size={20} />
-                シェアする
+                {shareFile ? 'シェアする' : '準備中...'}
               </button>
               <button
                 onClick={() => setShareModal(null)}
