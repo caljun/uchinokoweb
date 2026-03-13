@@ -5,7 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 function AuthPageContent() {
-  const [isLogin, setIsLogin] = useState(true)
+  const { signIn, signUp, user, loading: authLoading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -13,9 +16,6 @@ function AuthPageContent() {
   const [referrerDogId, setReferrerDogId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, signUp, user, loading: authLoading } = useAuth()
-  const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -58,7 +58,7 @@ function AuthPageContent() {
       <div className="mb-10 text-center">
         <div className="text-5xl mb-2">🐾</div>
         <h1 className="text-3xl font-bold text-orange-500">ウチの子</h1>
-        <p className="text-gray-500 mt-1 text-sm">わんちゃんと飼い主さんをつなぐ</p>
+        <p className="text-gray-500 mt-1 text-sm">飼い主の努力で1位を目指そう</p>
       </div>
 
       {/* タブ切り替え */}
