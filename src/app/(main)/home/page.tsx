@@ -153,7 +153,10 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className="px-4 py-6 max-w-2xl mx-auto">
+      <div className="px-4 pt-3 pb-0 max-w-2xl mx-auto">
+        <p className="text-xs text-gray-400">※このページにはアフィリエイトリンクが含まれます</p>
+      </div>
+      <div className="px-4 py-4 max-w-2xl mx-auto">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
