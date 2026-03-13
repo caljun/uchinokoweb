@@ -180,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setDoc(doc(db, 'owners', newUser.uid), {
       email,
       displayName,
+      name: displayName,
       friendId,
       totalPoints: 0,
       weeklyPoints: 0,

@@ -177,7 +177,7 @@ export default function OnboardingDogPage() {
               ←
             </button>
             <div className="flex-1">
-              <h1 className="text-lg font-bold text-gray-800">うちの子を登録</h1>
+              <h1 className="text-lg font-bold text-gray-800">ウチの子を登録</h1>
               <p className="text-xs text-gray-400">ステップ {step + 1} / 3</p>
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function OnboardingDogPage() {
                     <span className="text-3xl">🐾</span>
                   )}
                 </button>
-                <p className="text-xs text-gray-400 mt-2">写真を追加（任意）</p>
+                <p className="text-xs text-gray-400 mt-2">写真を追加（必須）</p>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
               </div>
 
@@ -333,6 +333,10 @@ export default function OnboardingDogPage() {
 
               <button
                 onClick={() => {
+                  if (!form.photo) {
+                    setError('写真を追加してください')
+                    return
+                  }
                   if (!form.name || !form.birthDate || !form.weight) {
                     setError('名前・生年月日・体重は必須です')
                     return
