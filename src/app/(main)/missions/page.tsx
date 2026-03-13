@@ -265,18 +265,14 @@ export default function MissionsPage() {
 
       {/* ミッション完了シェアモーダル */}
       {shareModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70" onClick={() => setShareModal(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6" onClick={() => setShareModal(null)}>
           <div
-            className="w-full max-w-lg bg-white rounded-t-3xl pb-10 overflow-hidden"
+            className="w-full max-w-sm bg-white rounded-3xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 写真エリア */}
+            {/* 写真プレビュー */}
             <div className="relative w-full aspect-square bg-black">
               <Image src={shareModal.photoUrl} alt="ミッション写真" fill className="object-contain" />
-              {/* 左上ロゴ */}
-              <div className="absolute top-3 left-3">
-                <Image src="/icon-192.png" alt="うちの子" width={36} height={36} className="rounded-lg" />
-              </div>
               {/* 閉じる */}
               <button
                 onClick={() => setShareModal(null)}
@@ -287,18 +283,58 @@ export default function MissionsPage() {
             </div>
 
             {/* 下部テキスト＋ボタン */}
-            <div className="px-6 pt-5 text-center">
+            <div className="px-6 py-6 text-center">
               <p className="text-2xl font-black text-gray-900">ミッションクリア！🎉</p>
               <p className="text-sm text-gray-500 mt-1">「{shareModal.missionTitle}」達成</p>
               <button
                 onClick={async () => {
                   try {
-                    await navigator.share({
-                      title: 'ミッションクリア！',
-                      text: `「${shareModal.missionTitle}」ミッションをクリアしました🐾 #うちの子`,
-                    })
+                    // canvasで画像合成（ロゴ左上・テキスト下部）
+                    const size = 1080
+                    const canvas = document.createElement('canvas')
+                    canvas.width = size
+                    canvas.height = size
+                    const ctx = canvas.getContext('2d')!
+
+                    // ミッション写真を描画
+                    const img = new window.Image()
+                    img.crossOrigin = 'anonymous'
+                    await new Promise<void>((resolve) => { img.onload = () => resolve(); img.src = shareModal.photoUrl })
+                    const scale = Math.max(size / img.width, size / img.height)
+                    const w = img.width * scale
+                    const h = img.height * scale
+                    ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h)
+
+                    // 下部グラデーションバー
+                    const grad = ctx.createLinearGradient(0, size - 200, 0, size)
+                    grad.addColorStop(0, 'rgba(0,0,0,0)')
+                    grad.addColorStop(1, 'rgba(0,0,0,0.7)')
+                    ctx.fillStyle = grad
+                    ctx.fillRect(0, size - 200, size, 200)
+
+                    // 「ミッションクリア！」テキスト
+                    ctx.fillStyle = '#ffffff'
+                    ctx.font = `bold 64px sans-serif`
+                    ctx.textAlign = 'center'
+                    ctx.fillText('ミッションクリア！', size / 2, size - 48)
+
+                    // うちの子ロゴ（左上）
+                    const logo = new window.Image()
+                    await new Promise<void>((resolve) => { logo.onload = () => resolve(); logo.src = '/icon-192.png' })
+                    ctx.drawImage(logo, 28, 28, 80, 80)
+
+                    // Fileとしてシェア
+                    const file = await new Promise<File>((resolve) =>
+                      canvas.toBlob((blob) => resolve(new File([blob!], 'mission.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.92)
+                    )
+
+                    if (navigator.canShare?.({ files: [file] })) {
+                      await navigator.share({ files: [file], text: '#うちの子' })
+                    } else {
+                      await navigator.share({ text: `ミッションクリア！ #うちの子` })
+                    }
                   } catch {
-                    // キャンセルや非対応は無視
+                    // キャンセル・非対応は無視
                   }
                 }}
                 className="mt-5 w-full flex items-center justify-center gap-2 py-4 bg-orange-500 hover:bg-orange-600 active:scale-[0.98] transition-all rounded-2xl text-white font-bold text-base"
