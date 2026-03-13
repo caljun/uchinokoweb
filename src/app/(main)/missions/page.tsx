@@ -289,21 +289,19 @@ export default function MissionsPage() {
               <button
                 onClick={async () => {
                   try {
-                    // canvasで画像合成（ロゴ左上・テキスト下部）
                     const size = 1080
                     const canvas = document.createElement('canvas')
                     canvas.width = size
                     canvas.height = size
                     const ctx = canvas.getContext('2d')!
 
-                    // ミッション写真を描画
-                    const img = new window.Image()
-                    img.crossOrigin = 'anonymous'
-                    await new Promise<void>((resolve) => { img.onload = () => resolve(); img.src = shareModal.photoUrl })
-                    const scale = Math.max(size / img.width, size / img.height)
-                    const w = img.width * scale
-                    const h = img.height * scale
-                    ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h)
+                    // fetchでblobとして取得（CORS canvas汚染を回避）
+                    const photoBlob = await fetch(shareModal.photoUrl).then((r) => r.blob())
+                    const photoBitmap = await createImageBitmap(photoBlob)
+                    const scale = Math.max(size / photoBitmap.width, size / photoBitmap.height)
+                    const w = photoBitmap.width * scale
+                    const h = photoBitmap.height * scale
+                    ctx.drawImage(photoBitmap, (size - w) / 2, (size - h) / 2, w, h)
 
                     // 下部グラデーションバー
                     const grad = ctx.createLinearGradient(0, size - 200, 0, size)
@@ -314,24 +312,24 @@ export default function MissionsPage() {
 
                     // 「ミッションクリア！」テキスト
                     ctx.fillStyle = '#ffffff'
-                    ctx.font = `bold 64px sans-serif`
+                    ctx.font = 'bold 64px sans-serif'
                     ctx.textAlign = 'center'
                     ctx.fillText('ミッションクリア！', size / 2, size - 48)
 
                     // うちの子ロゴ（左上）
-                    const logo = new window.Image()
-                    await new Promise<void>((resolve) => { logo.onload = () => resolve(); logo.src = '/icon-192.png' })
-                    ctx.drawImage(logo, 28, 28, 80, 80)
+                    const logoBlob = await fetch('/icon-192.png').then((r) => r.blob())
+                    const logoBitmap = await createImageBitmap(logoBlob)
+                    ctx.drawImage(logoBitmap, 28, 28, 80, 80)
 
                     // Fileとしてシェア
-                    const file = await new Promise<File>((resolve) =>
-                      canvas.toBlob((blob) => resolve(new File([blob!], 'mission.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.92)
+                    const file = await new Promise<File>((resolve, reject) =>
+                      canvas.toBlob((blob) => blob ? resolve(new File([blob], 'mission.jpg', { type: 'image/jpeg' })) : reject(), 'image/jpeg', 0.92)
                     )
 
                     if (navigator.canShare?.({ files: [file] })) {
                       await navigator.share({ files: [file], text: '#うちの子' })
                     } else {
-                      await navigator.share({ text: `ミッションクリア！ #うちの子` })
+                      await navigator.share({ text: 'ミッションクリア！ #うちの子' })
                     }
                   } catch {
                     // キャンセル・非対応は無視
