@@ -31,7 +31,7 @@ export default function RootPage() {
         <div className="text-6xl mb-4">🐾</div>
         <h1 className="text-3xl font-bold text-orange-500 mb-2">ウチの子</h1>
         <p className="text-gray-500 text-base leading-relaxed max-w-xs">
-          うちの子のプロフィールを作って、<br />
+          ウチの子のプロフィールを作って、<br />
           毎日のミッションで1位を目指そう。
         </p>
 
@@ -47,14 +47,14 @@ export default function RootPage() {
             <span className="text-2xl">🏆</span>
             <div>
               <p className="font-bold text-gray-800 text-sm">週間ランキング</p>
-              <p className="text-xs text-gray-400">かわいさじゃなく、努力で1位へ</p>
+              <p className="text-xs text-gray-400">愛犬を1位へ！</p>
             </div>
           </div>
           <div className="flex items-start gap-3 text-left bg-white rounded-2xl p-4 shadow-sm">
             <span className="text-2xl">🛍️</span>
             <div>
-              <p className="font-bold text-gray-800 text-sm">うちの子おすすめ</p>
-              <p className="text-xs text-gray-400">犬種・年齢に合ったグッズをピックアップ</p>
+              <p className="font-bold text-gray-800 text-sm">ウチの子おすすめ</p>
+              <p className="text-xs text-gray-400">愛犬に合った商品をピックアップ！</p>
             </div>
           </div>
         </div>
