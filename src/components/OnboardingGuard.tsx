@@ -13,7 +13,9 @@ export function OnboardingGuard() {
     if (!user) return
     if (hasDog === null) return // 犬の有無をまだ確認中
 
-    if (hasDog === false) {
+    if (!owner?.photoUrl) {
+      router.replace('/onboarding/profile')
+    } else if (hasDog === false) {
       router.replace('/onboarding/dog')
     }
   }, [loading, user, owner, hasDog, router])
