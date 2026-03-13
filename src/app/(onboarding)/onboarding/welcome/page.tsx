@@ -1,54 +1,56 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-const FEATURES = [
-  {
-    icon: '📸',
-    title: 'ミッション',
-    desc: '毎日の写真でポイントを貯めよう。正面向き、お散歩中など、ミッションをこなすほど上位を狙える。',
-  },
-  {
-    icon: '🏆',
-    title: 'ランキング',
-    desc: '毎週リセット。飼い主の努力が順位に直結する。あなたの頑張りで愛犬を1位へ！',
-  },
-  {
-    icon: '🛍️',
-    title: 'おすすめ',
-    desc: '愛犬に合った商品をピックアップ！',
-  },
-]
+import { collection, getDocs, query, limit, orderBy } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function WelcomePage() {
   const router = useRouter()
+  const { user } = useAuth()
+  const [dogName, setDogName] = useState('')
+
+  useEffect(() => {
+    if (!user) return
+    getDocs(query(collection(db, 'owners', user.uid, 'dogs'), orderBy('createdAt', 'desc'), limit(1)))
+      .then((snap) => {
+        if (!snap.empty) setDogName(snap.docs[0].data().name ?? '')
+      })
+      .catch(() => {})
+  }, [user])
 
   return (
-    <div className="min-h-screen bg-white flex flex-col px-6 pt-16 pb-10">
-      <div className="text-center mb-10">
-        <div className="text-5xl mb-3">🎉</div>
-        <h1 className="text-2xl font-bold text-gray-900">登録完了！</h1>
-        <p className="text-sm text-gray-400 mt-2">ウチの子へようこそ</p>
-      </div>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 pb-10 text-center">
+      <div className="text-6xl mb-4">🎉</div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">登録完了！</h1>
+      <p className="text-gray-500 text-sm mb-12">
+        {dogName ? `${dogName}と一緒に` : ''}さっそくミッションをやってみよう
+      </p>
 
-      <div className="space-y-4 mb-10">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="flex gap-4 bg-orange-50 rounded-2xl p-4">
-            <div className="text-3xl pt-0.5">{f.icon}</div>
-            <div>
-              <p className="font-bold text-gray-900 text-base">{f.title}</p>
-              <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{f.desc}</p>
-            </div>
+      <div className="w-full max-w-sm bg-orange-50 rounded-2xl p-5 mb-10 text-left">
+        <p className="text-xs text-orange-400 font-bold mb-2">今日のミッション</p>
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">📸</span>
+          <div>
+            <p className="font-bold text-gray-900">正面を向いた写真を撮る</p>
+            <p className="text-sm text-orange-500 font-bold mt-0.5">+10pt</p>
           </div>
-        ))}
+        </div>
       </div>
 
-      <div className="mt-auto">
+      <div className="w-full max-w-sm space-y-3">
         <button
-          onClick={() => router.replace('/uchinoko')}
+          onClick={() => router.replace('/missions')}
           className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-base hover:bg-orange-600 transition-colors"
         >
-          さあはじめよう →
+          ミッションをやる →
+        </button>
+        <button
+          onClick={() => router.replace('/uchinoko')}
+          className="w-full py-3 text-gray-400 text-sm"
+        >
+          あとで
         </button>
       </div>
     </div>
