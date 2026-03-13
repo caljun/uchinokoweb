@@ -7,7 +7,7 @@ import { collection, getDocs, query, limit, doc, setDoc, serverTimestamp } from 
 import { storage, db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
-import { Camera, CheckCircle, Lock, Star, Sparkles } from 'lucide-react'
+import { Camera, CheckCircle, Lock, Star, Sparkles, Share2, X } from 'lucide-react'
 import { Dog } from '@/types/dog'
 
 const DAILY_MISSIONS = [
@@ -73,6 +73,7 @@ export default function MissionsPage() {
   const [activeMissionId, setActiveMissionId] = useState<string | null>(null)
   const [isWeeklyActive, setIsWeeklyActive] = useState(false)
   const [dogsLoading, setDogsLoading] = useState(true)
+  const [shareModal, setShareModal] = useState<{ photoUrl: string; missionTitle: string } | null>(null)
 
   // 犬一覧取得
   useEffect(() => {
@@ -140,6 +141,7 @@ export default function MissionsPage() {
         }
         setPointAnim(mission.points)
         setTimeout(() => setPointAnim(null), 2000)
+        setShareModal({ photoUrl, missionTitle: mission.title })
 
         // 日記（ギャラリー用）にも保存
         await setDoc(
@@ -260,6 +262,60 @@ export default function MissionsPage() {
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {/* ミッション完了シェアモーダル */}
+      {shareModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70" onClick={() => setShareModal(null)}>
+          <div
+            className="w-full max-w-lg bg-white rounded-t-3xl pb-10 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 写真エリア */}
+            <div className="relative w-full aspect-square bg-black">
+              <Image src={shareModal.photoUrl} alt="ミッション写真" fill className="object-contain" />
+              {/* 左上ロゴ */}
+              <div className="absolute top-3 left-3">
+                <Image src="/icon-192.png" alt="うちの子" width={36} height={36} className="rounded-lg" />
+              </div>
+              {/* 閉じる */}
+              <button
+                onClick={() => setShareModal(null)}
+                className="absolute top-3 right-3 bg-black/50 rounded-full p-1.5"
+              >
+                <X size={18} className="text-white" />
+              </button>
+            </div>
+
+            {/* 下部テキスト＋ボタン */}
+            <div className="px-6 pt-5 text-center">
+              <p className="text-2xl font-black text-gray-900">ミッションクリア！🎉</p>
+              <p className="text-sm text-gray-500 mt-1">「{shareModal.missionTitle}」達成</p>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.share({
+                      title: 'ミッションクリア！',
+                      text: `「${shareModal.missionTitle}」ミッションをクリアしました🐾 #うちの子`,
+                    })
+                  } catch {
+                    // キャンセルや非対応は無視
+                  }
+                }}
+                className="mt-5 w-full flex items-center justify-center gap-2 py-4 bg-orange-500 hover:bg-orange-600 active:scale-[0.98] transition-all rounded-2xl text-white font-bold text-base"
+              >
+                <Share2 size={20} />
+                シェアする
+              </button>
+              <button
+                onClick={() => setShareModal(null)}
+                className="mt-3 w-full py-3 text-sm text-gray-400"
+              >
+                あとで
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* +pt アニメーション */}
       {pointAnim !== null && (
