@@ -3,6 +3,8 @@ import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getFunctions } from 'firebase/functions'
+import { getMessaging, type Messaging } from 'firebase/messaging'
+
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -19,5 +21,13 @@ const auth = getAuth(app)
 const db = getFirestore(app)
 const storage = getStorage(app)
 const functions = getFunctions(app, 'us-central1')
+
+// MessagingはSSRで呼べないのでクライアントのみ遅延取得
+let _messaging: Messaging | null = null
+export function getMessagingInstance(): Messaging | null {
+  if (typeof window === 'undefined') return null
+  if (!_messaging) _messaging = getMessaging(app)
+  return _messaging
+}
 
 export { app, auth, db, storage, functions }

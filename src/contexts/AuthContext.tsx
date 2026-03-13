@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { auth, db, functions } from '@/lib/firebase'
+import { registerPushToken } from '@/lib/fcm'
 
 export interface OwnerProfile {
   uid: string
@@ -55,6 +56,7 @@ interface AuthContextType {
   reloadOwner: () => Promise<void>
   setHasDog: (v: boolean) => void
   addMissionPoints: (dogId: string, missionId: string, points: number) => Promise<boolean>
+  addWeeklyMissionPoints: (dogId: string, missionId: string, points: number) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -151,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(firebaseUser)
       if (firebaseUser) {
         await fetchOwner(firebaseUser.uid)
+        registerPushToken(firebaseUser.uid)
       } else {
         setOwner(null)
         setHasDog(null)
@@ -200,6 +203,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth)
   }
 
+  // スペシャルミッション達成 → 今週のキーで重複チェック
+  const addWeeklyMissionPoints = useCallback(async (dogId: string, missionId: string, points: number): Promise<boolean> => {
+    if (!user) return false
+    const currentWeek = getCurrentWeekStr()
+    const completedRef = doc(db, 'owners', user.uid, 'dogs', dogId, 'completedMissions', `${currentWeek}_${missionId}`)
+    const dogRef = doc(db, 'owners', user.uid, 'dogs', dogId)
+
+    try {
+      let awarded = false
+      await runTransaction(db, async (tx) => {
+        const completedSnap = await tx.get(completedRef)
+        if (completedSnap.exists()) return
+
+        const dogSnap = await tx.get(dogRef)
+        const dogData = dogSnap.data() ?? {}
+        const storedWeek = dogData.weeklyPointsWeekStr as string | undefined
+        const weeklyReset = storedWeek !== currentWeek
+
+        tx.set(completedRef, { missionId, points, completedAt: serverTimestamp() })
+        tx.update(dogRef, {
+          ownerId: user.uid,
+          totalPoints: increment(points),
+          weeklyPoints: weeklyReset ? points : increment(points),
+          weeklyPointsWeekStr: currentWeek,
+        })
+        awarded = true
+      })
+
+      return awarded
+    } catch {
+      return false
+    }
+  }, [user])
+
   // ミッション達成 → 犬単位でポイント付与。すでに今日達成済みなら false を返す
   const addMissionPoints = useCallback(async (dogId: string, missionId: string, points: number): Promise<boolean> => {
     if (!user) return false
@@ -236,7 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user])
 
   return (
-    <AuthContext.Provider value={{ user, owner, hasDog, loading, signIn, signUp, signOut, reloadOwner, setHasDog, addMissionPoints }}>
+    <AuthContext.Provider value={{ user, owner, hasDog, loading, signIn, signUp, signOut, reloadOwner, setHasDog, addMissionPoints, addWeeklyMissionPoints }}>
       {children}
     </AuthContext.Provider>
   )

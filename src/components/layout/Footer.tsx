@@ -14,8 +14,8 @@ export default function Footer() {
               <span className="text-sm font-bold text-gray-900 tracking-tight">ウチの子</span>
             </Link>
             <p className="text-xs text-gray-400 leading-relaxed">
-              わんちゃんと飼い主をつなぐ。<br />
-              性格診断・店舗予約・商品購入まで。
+              わんちゃんと飼い主のための<br />
+              ゲーミフィケーションアプリ。
             </p>
           </div>
 
@@ -23,11 +23,10 @@ export default function Footer() {
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">サービス</p>
             <ul className="space-y-2">
-              <li><Link href="/home" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">ホーム</Link></li>
-              <li><Link href="/search" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">お店を探す</Link></li>
+              <li><Link href="/home" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">おすすめ</Link></li>
               <li><Link href="/uchinoko" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">うちの子</Link></li>
-              <li><Link href="/reservations" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">予約</Link></li>
-              <li><Link href="/cart" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">カート</Link></li>
+              <li><Link href="/missions" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">ミッション</Link></li>
+              <li><Link href="/ranking" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">ランキング</Link></li>
             </ul>
           </div>
 
@@ -36,18 +35,16 @@ export default function Footer() {
             <p className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">マイページ</p>
             <ul className="space-y-2">
               <li><Link href="/profile" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">プロフィール</Link></li>
-              <li><Link href="/profile/orders" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">注文履歴</Link></li>
+              <li><Link href="/profile/friends" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">フレンド</Link></li>
             </ul>
           </div>
 
-          {/* 会社・法的 */}
+          {/* サポート */}
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">サポート</p>
             <ul className="space-y-2">
               <li><Link href="/terms" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">利用規約</Link></li>
               <li><Link href="/privacy" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">プライバシーポリシー</Link></li>
-              <li><Link href="/legal" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">特定商取引法</Link></li>
-              <li><Link href="/contact" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">お問い合わせ</Link></li>
             </ul>
           </div>
 
