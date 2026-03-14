@@ -1,15 +1,17 @@
 export interface Dog {
   id?: string
+  petType?: 'dog' | 'cat'  // 未設定は犬とみなす
   name: string
   birthDate: Date
-  ageGroup: number       // 0=パピー期, 1=成犬期, 2=シニア期
+  ageGroup: number       // 0=パピー期/子猫期, 1=成犬期/成猫期, 2=シニア期
   weight: number
   gender: string         // "male" | "female"
   neutered?: boolean
   breed: string
   mixBreed1?: string     // ミックス時の1つ目の犬種
   mixBreed2?: string     // ミックス時の2つ目の犬種
-  breedSize: number      // 0=小型, 1=中型, 2=大型
+  breedSize: number      // 0=小型, 1=中型, 2=大型（猫は常に0）
+  coatPattern?: string   // 猫の毛色・柄
 
   // 社会化マップ
   x: number              // -1=悪い, 0=普通, 1=良い（物覚え）
