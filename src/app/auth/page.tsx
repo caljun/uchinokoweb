@@ -16,6 +16,22 @@ function AuthPageContent() {
   const [referrerDogId, setReferrerDogId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isLineBrowser, setIsLineBrowser] = useState(false)
+  const [isAndroid, setIsAndroid] = useState(false)
+
+  useEffect(() => {
+    if (/Line\//i.test(navigator.userAgent)) {
+      setIsAndroid(/Android/i.test(navigator.userAgent))
+      const url = new URL(window.location.href)
+      if (!url.searchParams.has('openExternalBrowser')) {
+        url.searchParams.set('openExternalBrowser', '1')
+        window.location.replace(url.toString())
+        return
+      }
+      // openExternalBrowser=1 を付けても LINE が外部ブラウザで開かなかった場合のフォールバック
+      setIsLineBrowser(true)
+    }
+  }, [])
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -55,6 +71,17 @@ function AuthPageContent() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-gradient-to-b from-orange-50 to-white">
+      {/* LINEブラウザ警告 */}
+      {isLineBrowser && (
+        <div className="w-full max-w-sm mb-6 bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-sm text-yellow-800">
+          <p className="font-bold mb-1">{isAndroid ? 'Chromeで開いてください' : 'Safariで開いてください'}</p>
+          <p>
+            {isAndroid
+              ? 'LINEのブラウザでは登録が正しく完了しない場合があります。右上の「...」→「外部ブラウザで開く」を選んでから登録してください。'
+              : 'LINEのブラウザでは登録が正しく完了しない場合があります。右下の「...」→「Safariで開く」を選んでから登録してください。'}
+          </p>
+        </div>
+      )}
       {/* ロゴ */}
       <div className="mb-10 text-center">
         <div className="text-5xl mb-2">🐾</div>
