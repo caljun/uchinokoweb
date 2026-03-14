@@ -10,7 +10,7 @@ import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Camera, CheckCircle, Lock, Star, Sparkles, Share2, X } from 'lucide-react'
 import { Dog } from '@/types/dog'
 
-const DAILY_MISSIONS = [
+const DOG_DAILY_MISSIONS = [
   {
     id: 'photo_post',
     title: '今日の一枚',
@@ -34,10 +34,42 @@ const DAILY_MISSIONS = [
   },
 ]
 
-const WEEKLY_MISSION = {
+const CAT_DAILY_MISSIONS = [
+  {
+    id: 'photo_post',
+    title: '今日の一枚',
+    description: '今日の愛猫を撮影して投稿！どんな写真でもOK',
+    points: 10,
+    icon: '📸',
+  },
+  {
+    id: 'nap_photo',
+    title: 'お昼寝ショット',
+    description: 'くつろいでいる愛猫の写真を投稿しよう',
+    points: 10,
+    icon: '😴',
+  },
+  {
+    id: 'play_photo',
+    title: '遊び中ショット',
+    description: '遊んでいる愛猫の写真を投稿しよう',
+    points: 10,
+    icon: '🐱',
+  },
+]
+
+const DOG_WEEKLY_MISSION = {
   id: 'weekly_best',
   title: '今週のベストショット',
   description: '今週一番かわいい写真を1枚！週1回だけ挑戦できる',
+  points: 30,
+  icon: '✨',
+}
+
+const CAT_WEEKLY_MISSION = {
+  id: 'weekly_best',
+  title: '今週のベストショット',
+  description: '今週一番かわいい愛猫の写真を1枚！週1回だけ挑戦できる',
   points: 30,
   icon: '✨',
 }
@@ -166,9 +198,12 @@ export default function MissionsPage() {
     if (!file || !user || !activeMissionId || !selectedDog?.id) return
     e.target.value = ''
 
+    const isCat = selectedDog.petType === 'cat'
+    const dailyMissions = isCat ? CAT_DAILY_MISSIONS : DOG_DAILY_MISSIONS
+    const weeklyMission = isCat ? CAT_WEEKLY_MISSION : DOG_WEEKLY_MISSION
     const mission = isWeeklyActive
-      ? (WEEKLY_MISSION.id === activeMissionId ? WEEKLY_MISSION : null)
-      : DAILY_MISSIONS.find((m) => m.id === activeMissionId)
+      ? (weeklyMission.id === activeMissionId ? weeklyMission : null)
+      : dailyMissions.find((m) => m.id === activeMissionId)
     if (!mission) return
 
     setUploading(true)
@@ -235,7 +270,7 @@ export default function MissionsPage() {
     isUploading,
     isWeekly,
   }: {
-    mission: typeof WEEKLY_MISSION
+    mission: typeof DOG_WEEKLY_MISSION
     done: boolean
     isUploading: boolean
     isWeekly: boolean
@@ -280,7 +315,7 @@ export default function MissionsPage() {
           </button>
         ) : !selectedDog ? (
           <div className="w-full flex items-center justify-center py-3 bg-gray-100 rounded-xl text-sm text-gray-400">
-            上から犬を選んでください
+            上からペットを選んでください
           </div>
         ) : (
           <button
@@ -415,7 +450,9 @@ export default function MissionsPage() {
                         {dog.photoUrl ? (
                           <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-2xl">🐾</div>
+                          <div className="w-full h-full flex items-center justify-center text-2xl">
+                            {dog.petType === 'cat' ? '🐱' : '🐾'}
+                          </div>
                         )}
                       </div>
                       <p className={`text-xs font-bold truncate w-full text-center ${isSelected ? 'text-orange-500' : 'text-gray-600'}`}>
@@ -452,35 +489,38 @@ export default function MissionsPage() {
         )}
 
         {/* 毎日ミッション */}
-        {(!user || selectedDog) && (
-          <div>
-            <h2 className="text-sm font-bold text-gray-500 mb-3 px-1">毎日ミッション <span className="text-orange-400">各+10pt</span></h2>
-            {DAILY_MISSIONS.map((mission) => (
-              <MissionCard
-                key={mission.id}
-                mission={mission}
-                done={completedToday.has(mission.id)}
-                isUploading={uploading && activeMissionId === mission.id}
-                isWeekly={false}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* スペシャルミッション */}
-        {(!user || selectedDog) && (
-          <div>
-            <h2 className="text-sm font-bold text-gray-500 mb-3 px-1">
-              スペシャルミッション <span className="text-orange-400">+{WEEKLY_MISSION.points}pt</span>
-            </h2>
-            <MissionCard
-              mission={WEEKLY_MISSION}
-              done={completedThisWeek.has(WEEKLY_MISSION.id)}
-              isUploading={uploading && activeMissionId === WEEKLY_MISSION.id}
-              isWeekly={true}
-            />
-          </div>
-        )}
+        {(!user || selectedDog) && (() => {
+          const isCat = selectedDog?.petType === 'cat'
+          const dailyMissions = isCat ? CAT_DAILY_MISSIONS : DOG_DAILY_MISSIONS
+          const weeklyMission = isCat ? CAT_WEEKLY_MISSION : DOG_WEEKLY_MISSION
+          return (
+            <>
+              <div>
+                <h2 className="text-sm font-bold text-gray-500 mb-3 px-1">毎日ミッション <span className="text-orange-400">各+10pt</span></h2>
+                {dailyMissions.map((mission) => (
+                  <MissionCard
+                    key={mission.id}
+                    mission={mission}
+                    done={completedToday.has(mission.id)}
+                    isUploading={uploading && activeMissionId === mission.id}
+                    isWeekly={false}
+                  />
+                ))}
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-500 mb-3 px-1">
+                  スペシャルミッション <span className="text-orange-400">+{weeklyMission.points}pt</span>
+                </h2>
+                <MissionCard
+                  mission={weeklyMission}
+                  done={completedThisWeek.has(weeklyMission.id)}
+                  isUploading={uploading && activeMissionId === weeklyMission.id}
+                  isWeekly={true}
+                />
+              </div>
+            </>
+          )
+        })()}
 
       </div>
     </div>

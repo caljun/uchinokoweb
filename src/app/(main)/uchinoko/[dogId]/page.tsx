@@ -14,7 +14,6 @@ import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
 
 type Tab = 'info' | 'gallery' | 'health'
 
-const SIZE_LABELS = ['小型犬', '中型犬', '大型犬']
 const CONDITIONS = ['元気', '普通', 'ちょっと心配', 'しんどい']
 const APPETITES = ['よく食べた', '普通', 'あまり食べなかった']
 const CONDITION_COLORS: Record<string, string> = {
@@ -35,10 +34,14 @@ const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
     '特定の人になつきやすく、その他の人には人見知りをするタイプです。\nいつも抱っこされていたいと思っています。\n環境の変化は苦手なので、社会化を意識して取り組みましょう。',
 }
 
-function getTemperamentDescription(type: string): string {
-  return TEMPERAMENT_DESCRIPTIONS[type] ?? ''
+function getCatAgeDisplayText(birthDate: Date | { toDate?: () => Date }): string {
+  const date = birthDate instanceof Date ? birthDate : birthDate.toDate?.() ?? new Date()
+  const now = new Date()
+  const months = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth())
+  if (months < 12) return `${months}ヶ月`
+  const years = Math.floor(months / 12)
+  return `${years}歳`
 }
-
 
 export default function UchinokoDetailPage() {
   const { dogId } = useParams<{ dogId: string }>()
@@ -61,7 +64,6 @@ export default function UchinokoDetailPage() {
     const title = `${dog.name}と一緒にウチの子やろう🐾`
     const text = `${dog.name}が待ってるよ🐾 一緒にウチの子はじめよう！`
 
-    // 写真があればファイルとして一緒に共有（Web Share API Level 2）
     if (dog.photoUrl && navigator.share) {
       try {
         const res = await fetch(dog.photoUrl)
@@ -74,7 +76,6 @@ export default function UchinokoDetailPage() {
       } catch {}
     }
 
-    // フォールバック: 写真なしで共有
     if (navigator.share) {
       await navigator.share({ title, text, url })
     } else {
@@ -102,6 +103,10 @@ export default function UchinokoDetailPage() {
 
   if (loading) return <Loading />
   if (!dog) return null
+
+  const isCat = dog.petType === 'cat'
+  const slideCount = isCat ? 2 : 3
+  const petEmoji = isCat ? '🐱' : '🐾'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,7 +157,7 @@ export default function UchinokoDetailPage() {
                 </Link>
               </div>
 
-              {/* スライド（3枚） */}
+              {/* スライド */}
               <div
                 className="relative max-w-md mx-auto overflow-hidden"
                 onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
@@ -161,7 +166,9 @@ export default function UchinokoDetailPage() {
                   const diff = touchStartX.current - e.changedTouches[0].clientX
                   if (Math.abs(diff) > 40) {
                     setDetailSlide((prev) =>
-                      diff > 0 ? (prev === 2 ? 0 : prev + 1) : (prev === 0 ? 2 : prev - 1)
+                      diff > 0
+                        ? (prev === slideCount - 1 ? 0 : prev + 1)
+                        : (prev === 0 ? slideCount - 1 : prev - 1)
                     )
                   }
                   touchStartX.current = null
@@ -177,81 +184,85 @@ export default function UchinokoDetailPage() {
                       {dog.photoUrl ? (
                         <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-6xl">🐾</div>
+                        <div className="w-full h-full flex items-center justify-center text-6xl">{petEmoji}</div>
                       )}
                     </div>
                   </div>
 
-                  {/* 2枚目: 基本情報 + 犬のタイプ */}
+                  {/* 2枚目: 基本情報（犬・猫共通） */}
                   <div className="w-full shrink-0 px-1">
                     <div className="space-y-4">
                       <SummaryCard dog={dog} />
-                      <InfoCard title="犬のタイプ">
-                        <p className="text-xs text-gray-400 mb-1">性格タイプ</p>
-                        <p className="text-base font-semibold text-gray-800">{dog.temperamentType}</p>
-                        {getTemperamentDescription(dog.temperamentType) && (
-                          <p className="text-sm text-gray-500 mt-2 whitespace-pre-line">
-                            {getTemperamentDescription(dog.temperamentType)}
-                          </p>
-                        )}
-                      </InfoCard>
+                      {!isCat && (
+                        <InfoCard title="犬のタイプ">
+                          <p className="text-xs text-gray-400 mb-1">性格タイプ</p>
+                          <p className="text-base font-semibold text-gray-800">{dog.temperamentType}</p>
+                          {TEMPERAMENT_DESCRIPTIONS[dog.temperamentType] && (
+                            <p className="text-sm text-gray-500 mt-2 whitespace-pre-line">
+                              {TEMPERAMENT_DESCRIPTIONS[dog.temperamentType]}
+                            </p>
+                          )}
+                        </InfoCard>
+                      )}
                     </div>
                   </div>
 
-                  {/* 3枚目: 犬の特徴 + 詳細説明 */}
-                  <div className="w-full shrink-0 px-1">
-                    <div className="space-y-4 max-h-[450px] overflow-y-auto lg:max-h-none lg:overflow-visible">
-                      <InfoCard title="犬種の特徴">
-                        {(() => {
-                          const info = getBreedDescription(dog.breed)
-                          const hasContent = info.origin || info.purpose || info.pros || info.cons || info.chip
-                          if (!hasContent) {
-                            return <p className="text-sm text-gray-400">この犬種の特徴は準備中です。</p>
-                          }
-                          return (
-                            <div className="space-y-1 text-sm text-gray-700">
-                              <p className="font-semibold">【{dog.breed}の特徴】</p>
-                              {info.origin && <p className="text-gray-500">原産国: {info.origin}</p>}
-                              {info.purpose && <p className="text-gray-500">目的: {info.purpose}</p>}
-                              {info.pros && <p className="text-gray-500">長所: {info.pros}</p>}
-                              {info.cons && <p className="text-gray-500">短所: {info.cons}</p>}
-                              {info.chip && <p className="text-gray-500 mt-1 whitespace-pre-line">{info.chip}</p>}
+                  {/* 3枚目: 犬種の特徴（犬のみ） */}
+                  {!isCat && (
+                    <div className="w-full shrink-0 px-1">
+                      <div className="space-y-4 max-h-[450px] overflow-y-auto lg:max-h-none lg:overflow-visible">
+                        <InfoCard title="犬種の特徴">
+                          {(() => {
+                            const info = getBreedDescription(dog.breed)
+                            const hasContent = info.origin || info.purpose || info.pros || info.cons || info.chip
+                            if (!hasContent) {
+                              return <p className="text-sm text-gray-400">この犬種の特徴は準備中です。</p>
+                            }
+                            return (
+                              <div className="space-y-1 text-sm text-gray-700">
+                                <p className="font-semibold">【{dog.breed}の特徴】</p>
+                                {info.origin && <p className="text-gray-500">原産国: {info.origin}</p>}
+                                {info.purpose && <p className="text-gray-500">目的: {info.purpose}</p>}
+                                {info.pros && <p className="text-gray-500">長所: {info.pros}</p>}
+                                {info.cons && <p className="text-gray-500">短所: {info.cons}</p>}
+                                {info.chip && <p className="text-gray-500 mt-1 whitespace-pre-line">{info.chip}</p>}
+                              </div>
+                            )
+                          })()}
+                        </InfoCard>
+
+                        <InfoCard title="詳細説明">
+                          {dog.difficultyDescription ? (
+                            <div className="space-y-3 text-sm text-gray-500">
+                              {dog.difficultyDescription
+                                .split('\n\n')
+                                .map((paragraph, idx) => (
+                                  <p key={idx} className="leading-relaxed">
+                                    {paragraph.replace(/\n/g, '')}
+                                  </p>
+                                ))}
                             </div>
-                          )
-                        })()}
-                      </InfoCard>
-
-                      <InfoCard title="詳細説明">
-                        {dog.difficultyDescription ? (
-                          <div className="space-y-3 text-sm text-gray-500">
-                            {dog.difficultyDescription
-                              .split('\n\n')
-                              .map((paragraph, idx) => (
-                                <p key={idx} className="leading-relaxed">
-                                  {paragraph.replace(/\n/g, '')}
-                                </p>
-                              ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-400">まだ詳細説明はありません。</p>
-                        )}
-                      </InfoCard>
+                          ) : (
+                            <p className="text-sm text-gray-400">まだ詳細説明はありません。</p>
+                          )}
+                        </InfoCard>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* スライド操作 */}
                 <div className="absolute inset-y-1/2 left-0 right-0 flex items-center justify-between px-1 pointer-events-none">
                   <button
                     type="button"
-                    onClick={() => setDetailSlide((prev) => (prev === 0 ? 2 : prev - 1))}
+                    onClick={() => setDetailSlide((prev) => (prev === 0 ? slideCount - 1 : prev - 1))}
                     className="w-8 h-8 rounded-full bg-white/80 text-gray-600 flex items-center justify-center shadow pointer-events-auto"
                   >
                     ‹
                   </button>
                   <button
                     type="button"
-                    onClick={() => setDetailSlide((prev) => (prev === 2 ? 0 : prev + 1))}
+                    onClick={() => setDetailSlide((prev) => (prev === slideCount - 1 ? 0 : prev + 1))}
                     className="w-8 h-8 rounded-full bg-white/80 text-gray-600 flex items-center justify-center shadow pointer-events-auto"
                   >
                     ›
@@ -260,14 +271,12 @@ export default function UchinokoDetailPage() {
 
                 {/* ドットインジケータ */}
                 <div className="mt-3 flex justify-center gap-2">
-                  {[0, 1, 2].map((i) => (
+                  {Array.from({ length: slideCount }).map((_, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => setDetailSlide(i)}
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        detailSlide === i ? 'bg-orange-500' : 'bg-gray-300'
-                      }`}
+                      className={`w-2.5 h-2.5 rounded-full ${detailSlide === i ? 'bg-orange-500' : 'bg-gray-300'}`}
                     />
                   ))}
                 </div>
@@ -279,7 +288,6 @@ export default function UchinokoDetailPage() {
           {tab === 'gallery' && (
             <div>
               {(() => {
-                // diariesから写真URLを全部フラットに展開
                 const allPhotos = diaries.flatMap((d) =>
                   (d.photos ?? []).map((url) => ({ url, comment: d.comment, createdAt: d.createdAt }))
                 ).filter((p) => p.url)
@@ -309,12 +317,7 @@ export default function UchinokoDetailPage() {
                         onClick={() => setSelectedPhoto(photo)}
                         className="relative aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden"
                       >
-                        <Image
-                          src={photo.url}
-                          alt={`photo ${i}`}
-                          fill
-                          className="object-cover"
-                        />
+                        <Image src={photo.url} alt={`photo ${i}`} fill className="object-cover" />
                       </button>
                     ))}
                   </div>
@@ -377,20 +380,12 @@ export default function UchinokoDetailPage() {
               ×
             </button>
             <div className="flex-1 relative" onClick={() => setSelectedPhoto(null)}>
-              <Image
-                src={selectedPhoto.url}
-                alt=""
-                fill
-                className="object-contain"
-                sizes="100vw"
-              />
+              <Image src={selectedPhoto.url} alt="" fill className="object-contain" sizes="100vw" />
             </div>
             <div className="px-5 py-4 bg-black/80">
               {(() => {
                 const raw = selectedPhoto.createdAt
-                const date = raw instanceof Date
-                  ? raw
-                  : (raw as { toDate?: () => Date })?.toDate?.()
+                const date = raw instanceof Date ? raw : (raw as { toDate?: () => Date })?.toDate?.()
                 return date ? (
                   <p className="text-xs text-gray-400 mb-1">{date.toLocaleDateString('ja-JP')}</p>
                 ) : null
@@ -430,35 +425,11 @@ function Loading() {
   )
 }
 
-function Tag({ children, color }: { children: React.ReactNode; color: string }) {
-  const colors: Record<string, string> = {
-    orange: 'bg-orange-50 text-orange-600',
-    green: 'bg-green-50 text-green-600',
-    blue: 'bg-blue-50 text-blue-600',
-    yellow: 'bg-yellow-50 text-yellow-600',
-    gray: 'bg-gray-100 text-gray-600',
-  }
-  return (
-    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${colors[color] ?? colors.gray}`}>
-      {children}
-    </span>
-  )
-}
-
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm">
       <p className="text-sm font-bold text-gray-700 mb-3">{title}</p>
       <div className="space-y-2">{children}</div>
-    </div>
-  )
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-gray-400">{label}</span>
-      <span className="text-gray-700 font-medium">{value}</span>
     </div>
   )
 }
@@ -473,26 +444,30 @@ function EmptyState({ emoji, text }: { emoji: string; text: string }) {
 }
 
 function SummaryCard({ dog }: { dog: Dog }) {
-  const ageLabel = getAgeDisplayText(dog.birthDate, dog.breedSize)
+  const isCat = dog.petType === 'cat'
+  const ageLabel = isCat
+    ? getCatAgeDisplayText(dog.birthDate)
+    : getAgeDisplayText(dog.birthDate, dog.breedSize)
   const genderLabel = dog.gender === 'male' ? 'オス' : 'メス'
   const neuteredLabel = dog.neutered ? `${genderLabel}（去勢・避妊済み）` : genderLabel
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-      {/* 名前 */}
       <div className="mb-4">
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-lg font-bold text-gray-900 truncate">{dog.name}</h2>
           <span className="text-xs text-gray-400">基本情報</span>
         </div>
       </div>
-
-      {/* 基本ステータス（2x2 グリッド） */}
       <div className="grid grid-cols-2 gap-3">
         <SummaryTile label="年齢" icon="📅" value={ageLabel} />
         <SummaryTile label="性別" icon="⚥" value={neuteredLabel} />
         <SummaryTile label="体重" icon="⚖️" value={`${dog.weight}kg`} />
-        <SummaryTile label="犬種" icon="🐶" value={dog.breed} />
+        {isCat ? (
+          <SummaryTile label="毛色・柄" icon="🐱" value={dog.coatPattern ?? dog.breed} />
+        ) : (
+          <SummaryTile label="犬種" icon="🐶" value={dog.breed} />
+        )}
       </div>
     </div>
   )
@@ -583,7 +558,6 @@ function HealthModal({ ownerId, dogId, onClose, onCreated }: HealthModalProps) {
       <h2 className="text-base font-bold text-gray-800 mb-4">健康記録を追加</h2>
 
       <div className="space-y-4">
-        {/* 記録日 */}
         <Field label="記録日">
           <input
             type="date"
@@ -594,7 +568,6 @@ function HealthModal({ ownerId, dogId, onClose, onCreated }: HealthModalProps) {
           />
         </Field>
 
-        {/* 体重 */}
         <Field label="体重 (kg)（任意）">
           <input
             type="number"
@@ -607,7 +580,6 @@ function HealthModal({ ownerId, dogId, onClose, onCreated }: HealthModalProps) {
           />
         </Field>
 
-        {/* 体調 */}
         <Field label="体調">
           <div className="grid grid-cols-2 gap-2">
             {CONDITIONS.map((c) => (
@@ -624,7 +596,6 @@ function HealthModal({ ownerId, dogId, onClose, onCreated }: HealthModalProps) {
           </div>
         </Field>
 
-        {/* 食欲 */}
         <Field label="食欲">
           <div className="flex flex-col gap-2">
             {APPETITES.map((a) => (
@@ -643,7 +614,6 @@ function HealthModal({ ownerId, dogId, onClose, onCreated }: HealthModalProps) {
           </div>
         </Field>
 
-        {/* メモ */}
         <Field label="メモ（任意）">
           <textarea
             value={note}

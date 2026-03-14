@@ -258,9 +258,9 @@ export default function NewCatPage() {
             <button
               type="button"
               onClick={() => set('neutered', !form.neutered)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${form.neutered ? 'bg-orange-500' : 'bg-gray-200'}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.neutered ? 'bg-orange-500' : 'bg-gray-200'}`}
             >
-              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.neutered ? 'translate-x-7' : 'translate-x-1'}`} />
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.neutered ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
 
