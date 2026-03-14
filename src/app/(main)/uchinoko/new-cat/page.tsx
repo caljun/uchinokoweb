@@ -169,7 +169,7 @@ export default function NewCatPage() {
         <div className="bg-white px-5 pt-5 lg:pt-6 pb-4 sticky top-0 z-10 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <button onClick={() => router.back()} className="text-gray-500">←</button>
-            <h1 className="text-lg font-bold text-gray-800">🐱 うちの子を登録（猫）</h1>
+            <h1 className="text-lg font-bold text-gray-800">🐱 ウチの子を登録（猫）</h1>
           </div>
         </div>
 

@@ -17,7 +17,7 @@ export default function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col fixed top-0 left-0 h-full w-60 bg-white border-r border-gray-100 z-40">
       <div className="px-6 py-6 border-b border-gray-100">
-        <h1 className="text-2xl font-bold text-orange-500">うちの子 🐾</h1>
+        <h1 className="text-2xl font-bold text-orange-500">ウチの子 🐾</h1>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
         {NAV_ITEMS.map((item) => {

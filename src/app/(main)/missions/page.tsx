@@ -377,9 +377,9 @@ export default function MissionsPage() {
                   if (!shareFile) return
                   try {
                     if (navigator.canShare?.({ files: [shareFile] })) {
-                      await navigator.share({ files: [shareFile], text: '#うちの子' })
+                      await navigator.share({ files: [shareFile], text: '#ウチの子' })
                     } else {
-                      await navigator.share({ text: 'ミッションクリア！ #うちの子' })
+                      await navigator.share({ text: 'ミッションクリア！ #ウチの子' })
                     }
                   } catch {
                     // キャンセル・非対応は無視

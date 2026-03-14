@@ -91,7 +91,7 @@ export default function ProfilePage() {
         {/* うちの子 */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-700">うちの子</h2>
+            <h2 className="text-sm font-bold text-gray-700">ウチの子</h2>
             <Link href="/uchinoko/new" className="flex items-center gap-1 text-xs text-orange-500 font-medium">
               <Plus size={14} />
               追加

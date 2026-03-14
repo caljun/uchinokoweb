@@ -24,7 +24,7 @@ export default function Footer() {
             <p className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">サービス</p>
             <ul className="space-y-2">
               <li><Link href="/home" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">おすすめ</Link></li>
-              <li><Link href="/uchinoko" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">うちの子</Link></li>
+              <li><Link href="/uchinoko" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">ウチの子</Link></li>
               <li><Link href="/missions" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">ミッション</Link></li>
               <li><Link href="/ranking" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">ランキング</Link></li>
             </ul>

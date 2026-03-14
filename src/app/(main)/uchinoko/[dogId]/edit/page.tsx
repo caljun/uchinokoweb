@@ -205,7 +205,7 @@ export default function UchinokoEditPage() {
               ←
             </button>
             <div className="flex-1">
-              <h1 className="text-lg font-bold text-gray-800">うちの子を編集</h1>
+              <h1 className="text-lg font-bold text-gray-800">ウチの子を編集</h1>
               <p className="text-xs text-gray-400">ステップ {step + 1} / 3</p>
             </div>
           </div>

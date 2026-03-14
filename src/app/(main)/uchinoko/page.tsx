@@ -42,7 +42,7 @@ export default function UchinokoPage() {
           <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
             <PawPrint size={40} strokeWidth={1.5} className="text-gray-300" />
           </div>
-          <p className="text-gray-500 text-center text-sm">ログインするとうちの子を登録できます</p>
+          <p className="text-gray-500 text-center text-sm">ログインするとウチの子を登録できます</p>
           <button
             type="button"
             onClick={openAuthModal}
@@ -77,7 +77,7 @@ export default function UchinokoPage() {
           ) : dogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-400">
               <PawPrint size={48} strokeWidth={1.5} />
-              <p className="text-gray-500 text-center">まだうちの子が登録されていません</p>
+              <p className="text-gray-500 text-center">まだウチの子が登録されていません</p>
               <button
                 onClick={() => setShowPetModal(true)}
                 className="px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors text-sm"
@@ -127,7 +127,7 @@ export default function UchinokoPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-800">うちの子はどっち？</h2>
+              <h2 className="text-lg font-bold text-gray-800">ウチの子はどっち？</h2>
               <button onClick={() => setShowPetModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>

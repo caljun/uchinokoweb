@@ -56,7 +56,7 @@ function RankCard({ entry, rank, isMe }: { entry: RankDog; rank: number; isMe: b
         <div className="flex items-center gap-1.5">
           <p className={`font-bold truncate text-sm ${isMe ? 'text-orange-500' : 'text-gray-900'}`}>
             {entry.name}
-            {isMe && <span className="text-xs ml-1 text-orange-400">（うちの子）</span>}
+            {isMe && <span className="text-xs ml-1 text-orange-400">（ウチの子）</span>}
           </p>
         </div>
         {entry.breed && (
