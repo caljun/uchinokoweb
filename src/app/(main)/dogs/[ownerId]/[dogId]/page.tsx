@@ -10,11 +10,11 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
-import { Dog, Diary, HealthRecord } from '@/types/dog'
-import { ArrowLeft, BookOpen, Heart, X } from 'lucide-react'
+import { Dog, Diary } from '@/types/dog'
+import { ArrowLeft, BookOpen, X } from 'lucide-react'
 import { getBreedDescription, getAgeDisplayText, BreedInfo } from '@/lib/diagnosis'
 
-type Tab = 'detail' | 'gallery' | 'health'
+type Tab = 'detail' | 'gallery'
 
 type FriendStatus =
   | 'loading'
@@ -38,29 +38,12 @@ const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
   守られタイプ: '特定の人になつきやすく、甘えん坊なタイプ。安心できる環境が大切です。',
 }
 
-const CONDITION_COLORS: Record<string, string> = {
-  '元気': 'text-green-600 bg-green-50',
-  '普通': 'text-blue-600 bg-blue-50',
-  'ちょっと心配': 'text-orange-600 bg-orange-50',
-  'しんどい': 'text-red-600 bg-red-50',
-}
-
-function toDate(v: unknown): Date | null {
-  if (!v) return null
-  if (typeof (v as { toDate?: () => Date }).toDate === 'function') {
-    return (v as { toDate: () => Date }).toDate()
-  }
-  const d = new Date(v as string)
-  return isNaN(d.getTime()) ? null : d
-}
-
 export default function PublicDogProfilePage() {
   const { ownerId, dogId } = useParams<{ ownerId: string; dogId: string }>()
   const router = useRouter()
   const { user } = useAuth()
   const [dog, setDog] = useState<Dog | null>(null)
   const [diaries, setDiaries] = useState<Diary[]>([])
-  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('detail')
@@ -82,12 +65,8 @@ export default function PublicDogProfilePage() {
       const data = { id: snap.id, ...snap.data() } as Dog
       setDog(data)
 
-      await Promise.allSettled([
-        getDocs(query(collection(db, 'owners', ownerId, 'dogs', dogId, 'diaries'), orderBy('createdAt', 'desc')))
-          .then(s => setDiaries(s.docs.map(d => ({ id: d.id, ...d.data() } as Diary)))),
-        getDocs(query(collection(db, 'owners', ownerId, 'dogs', dogId, 'healthRecords'), orderBy('recordDate', 'desc')))
-          .then(s => setHealthRecords(s.docs.map(d => ({ id: d.id, ...d.data() } as HealthRecord)))),
-      ])
+      const diarySnap = await getDocs(query(collection(db, 'owners', ownerId, 'dogs', dogId, 'diaries'), orderBy('createdAt', 'desc')))
+      setDiaries(diarySnap.docs.map(d => ({ id: d.id, ...d.data() } as Diary)))
       setLoading(false)
     }
     load().catch(() => { setNotFound(true); setLoading(false) })
@@ -259,7 +238,6 @@ export default function PublicDogProfilePage() {
           {([
             { key: 'detail' as Tab, label: '詳細' },
             { key: 'gallery' as Tab, label: 'ギャラリー' },
-            { key: 'health' as Tab, label: '健康' },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -392,45 +370,6 @@ export default function PublicDogProfilePage() {
             </div>
           )
         })()}
-
-        {/* ── 健康タブ ── */}
-        {activeTab === 'health' && (
-          healthRecords.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-              <Heart size={36} strokeWidth={1.5} />
-              <p className="text-sm">健康記録はまだありません</p>
-            </div>
-          ) : (
-            <div className="max-w-lg mx-auto px-5 pt-5 space-y-3">
-              {healthRecords.map((rec) => {
-                const date = toDate(rec.recordDate)
-                return (
-                  <div key={rec.id} className="bg-white rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      {date && (
-                        <p className="text-sm font-medium text-gray-800">
-                          {date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
-                        </p>
-                      )}
-                      {rec.condition && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CONDITION_COLORS[rec.condition] ?? 'text-gray-500 bg-gray-100'}`}>
-                          {rec.condition}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                      {rec.weight != null && <span>体重 <strong>{rec.weight} kg</strong></span>}
-                      {rec.appetite && <span>食欲 <strong>{rec.appetite}</strong></span>}
-                    </div>
-                    {rec.note && (
-                      <p className="text-sm text-gray-500 mt-2 leading-relaxed">{rec.note}</p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )
-        )}
 
       </div>
 

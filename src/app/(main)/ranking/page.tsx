@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import {
   collectionGroup, getDocs, orderBy, query, limit, where,
   collection,
@@ -45,7 +44,8 @@ function RankCard({ entry, rank, isMe }: { entry: RankDog; rank: number; isMe: b
       {/* 犬の写真 */}
       <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-100 relative shrink-0">
         {entry.photoUrl ? (
-          <Image src={entry.photoUrl} alt={entry.name} fill sizes="48px" className="object-cover" />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={entry.photoUrl} alt={entry.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-xl">🐾</div>
         )}

@@ -4,24 +4,15 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { doc, getDoc, collection, query, orderBy, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, collection, query, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
-import { Dog, Diary, HealthRecord } from '@/types/dog'
+import { Dog, Diary } from '@/types/dog'
 import { Pencil, Share2, Target, UserPlus } from 'lucide-react'
 import { ShareCardsModal } from '@/components/share/ShareCardsModal'
 import { getBreedDescription, getAgeDisplayText, getCatAgeDisplayText } from '@/lib/diagnosis'
 
-type Tab = 'info' | 'gallery' | 'health'
-
-const CONDITIONS = ['元気', '普通', 'ちょっと心配', 'しんどい']
-const APPETITES = ['よく食べた', '普通', 'あまり食べなかった']
-const CONDITION_COLORS: Record<string, string> = {
-  '元気': 'text-green-600 bg-green-50',
-  '普通': 'text-blue-600 bg-blue-50',
-  'ちょっと心配': 'text-orange-600 bg-orange-50',
-  'しんどい': 'text-red-600 bg-red-50',
-}
+type Tab = 'info' | 'gallery'
 
 const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
   リーダータイプ:
@@ -41,11 +32,9 @@ export default function UchinokoDetailPage() {
   const router = useRouter()
   const [dog, setDog] = useState<Dog | null>(null)
   const [diaries, setDiaries] = useState<Diary[]>([])
-  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([])
   const [tab, setTab] = useState<Tab>('info')
   const [detailSlide, setDetailSlide] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [showHealthModal, setShowHealthModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; comment?: string; createdAt?: unknown } | null>(null)
   const touchStartX = useRef<number | null>(null)
@@ -82,12 +71,8 @@ export default function UchinokoDetailPage() {
       if (!dogSnap.exists()) { router.push('/uchinoko'); return }
       setDog({ id: dogSnap.id, ...dogSnap.data() } as Dog)
 
-      const [diarySnap, healthSnap] = await Promise.all([
-        getDocs(query(collection(db, 'owners', user.uid, 'dogs', dogId, 'diaries'), orderBy('createdAt', 'desc'))),
-        getDocs(query(collection(db, 'owners', user.uid, 'dogs', dogId, 'healthRecords'), orderBy('recordDate', 'desc'))),
-      ])
+      const diarySnap = await getDocs(query(collection(db, 'owners', user.uid, 'dogs', dogId, 'diaries'), orderBy('createdAt', 'desc')))
       setDiaries(diarySnap.docs.map((d) => ({ id: d.id, ...d.data() } as Diary)))
-      setHealthRecords(healthSnap.docs.map((d) => ({ id: d.id, ...d.data() } as HealthRecord)))
       setLoading(false)
     }
     fetchAll()
@@ -106,7 +91,7 @@ export default function UchinokoDetailPage() {
         {/* タブ */}
         <div className="bg-white border-b border-gray-100 mt-2">
           <div className="px-5 flex">
-            {(['info', 'gallery', 'health'] as Tab[]).map((t) => (
+            {(['info', 'gallery'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -114,7 +99,7 @@ export default function UchinokoDetailPage() {
                   tab === t ? 'border-orange-400 text-orange-500' : 'border-transparent text-gray-400'
                 }`}
               >
-                {t === 'info' ? '詳細' : t === 'gallery' ? 'ギャラリー' : '健康'}
+                {t === 'info' ? '詳細' : 'ギャラリー'}
               </button>
             ))}
           </div>
@@ -318,47 +303,6 @@ export default function UchinokoDetailPage() {
             </div>
           )}
 
-          {/* 健康記録タブ */}
-          {tab === 'health' && (
-            <div>
-              <div className="flex justify-end mb-3">
-                <button
-                  onClick={() => setShowHealthModal(true)}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold"
-                >
-                  + 記録を追加
-                </button>
-              </div>
-              {healthRecords.length === 0 ? (
-                <EmptyState emoji="🏥" text="まだ健康記録がありません" />
-              ) : (
-                <div className="space-y-3">
-                  {healthRecords.map((record) => {
-                    const date = record.recordDate instanceof Date
-                      ? record.recordDate
-                      : (record.recordDate as { toDate?: () => Date })?.toDate?.() ?? new Date()
-                    return (
-                      <div key={record.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm font-bold text-gray-700">
-                            {date.toLocaleDateString('ja-JP')}
-                          </p>
-                          {record.condition && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CONDITION_COLORS[record.condition] ?? ''}`}>
-                              {record.condition}
-                            </span>
-                          )}
-                        </div>
-                        {record.weight && <p className="text-sm text-gray-500">体重: {record.weight}kg</p>}
-                        {record.appetite && <p className="text-sm text-gray-500">食欲: {record.appetite}</p>}
-                        {record.note && <p className="text-sm text-gray-500 mt-1">{record.note}</p>}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* 写真詳細モーダル */}
@@ -394,15 +338,7 @@ export default function UchinokoDetailPage() {
           <ShareCardsModal dog={dog} onClose={() => setShowShareModal(false)} />
         )}
 
-        {/* 健康記録追加モーダル */}
-        {showHealthModal && user && dogId && (
-          <HealthModal
-            ownerId={user.uid}
-            dogId={dogId}
-            onClose={() => setShowHealthModal(false)}
-            onCreated={(record) => setHealthRecords((prev) => [record, ...prev])}
-          />
-        )}
+
       </div>
     </div>
   )
@@ -422,15 +358,6 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
     <div className="bg-white rounded-2xl p-4 shadow-sm">
       <p className="text-sm font-bold text-gray-700 mb-3">{title}</p>
       <div className="space-y-2">{children}</div>
-    </div>
-  )
-}
-
-function EmptyState({ emoji, text }: { emoji: string; text: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3">
-      <span className="text-5xl">{emoji}</span>
-      <p className="text-gray-400 text-sm">{text}</p>
     </div>
   )
 }
@@ -477,163 +404,3 @@ function SummaryTile({ label, icon, value }: { label: string; icon: string; valu
   )
 }
 
-// ===== モーダルコンポーネント =====
-function ModalShell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-end px-4 pt-3">
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
-          >
-            ×
-          </button>
-        </div>
-        <div className="px-5 pb-5">{children}</div>
-      </div>
-    </div>
-  )
-}
-
-type HealthModalProps = {
-  ownerId: string
-  dogId: string
-  onClose: () => void
-  onCreated: (record: HealthRecord) => void
-}
-
-function HealthModal({ ownerId, dogId, onClose, onCreated }: HealthModalProps) {
-  const [recordDate, setRecordDate] = useState(new Date().toISOString().split('T')[0])
-  const [weight, setWeight] = useState('')
-  const [condition, setCondition] = useState('')
-  const [appetite, setAppetite] = useState('')
-  const [note, setNote] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const docRef = await addDoc(
-        collection(db, 'owners', ownerId, 'dogs', dogId, 'healthRecords'),
-        {
-          dogId,
-          ownerId,
-          recordDate: new Date(recordDate),
-          weight: weight ? parseFloat(weight) : null,
-          condition: condition || null,
-          appetite: appetite || null,
-          note: note || null,
-          createdAt: serverTimestamp(),
-        }
-      )
-
-      onCreated({
-        id: docRef.id,
-        dogId,
-        ownerId,
-        recordDate: new Date(recordDate),
-        weight: weight ? parseFloat(weight) : null,
-        condition: condition || null,
-        appetite: appetite || null,
-        note: note || null,
-        createdAt: new Date(),
-      } as HealthRecord)
-      onClose()
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <ModalShell onClose={onClose}>
-      <h2 className="text-base font-bold text-gray-800 mb-4">健康記録を追加</h2>
-
-      <div className="space-y-4">
-        <Field label="記録日">
-          <input
-            type="date"
-            value={recordDate}
-            onChange={(e) => setRecordDate(e.target.value)}
-            max={new Date().toISOString().split('T')[0]}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white text-sm"
-          />
-        </Field>
-
-        <Field label="体重 (kg)（任意）">
-          <input
-            type="number"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder="例: 3.5"
-            step="0.1"
-            min="0"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white text-sm"
-          />
-        </Field>
-
-        <Field label="体調">
-          <div className="grid grid-cols-2 gap-2">
-            {CONDITIONS.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCondition(condition === c ? '' : c)}
-                className={`py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                  condition === c ? CONDITION_COLORS[c] : 'border-gray-200 bg-white text-gray-500'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </Field>
-
-        <Field label="食欲">
-          <div className="flex flex-col gap-2">
-            {APPETITES.map((a) => (
-              <button
-                key={a}
-                onClick={() => setAppetite(appetite === a ? '' : a)}
-                className={`py-3 rounded-xl border-2 text-sm font-medium text-left px-4 transition-all ${
-                  appetite === a
-                    ? 'border-orange-400 bg-orange-50 text-orange-600'
-                    : 'border-gray-200 bg-white text-gray-500'
-                }`}
-              >
-                {a}
-              </button>
-            ))}
-          </div>
-        </Field>
-
-        <Field label="メモ（任意）">
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value.slice(0, 200))}
-            placeholder="気になることがあれば..."
-            rows={4}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white text-sm resize-none"
-          />
-          <p className="text-xs text-gray-400 text-right mt-1">{note.length}/200</p>
-        </Field>
-      </div>
-
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="mt-5 w-full py-3 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors disabled:opacity-40"
-      >
-        {saving ? '保存中...' : '保存する'}
-      </button>
-    </ModalShell>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
-      {children}
-    </div>
-  )
-}

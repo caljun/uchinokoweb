@@ -448,7 +448,7 @@ export default function MissionsPage() {
                     >
                       <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-100 relative">
                         {dog.photoUrl ? (
-                          <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" />
+                          <Image src={dog.photoUrl} alt={dog.name} fill sizes="48px" className="object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-2xl">
                             {dog.petType === 'cat' ? '🐱' : '🐾'}

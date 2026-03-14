@@ -115,19 +115,14 @@ export default function ProfilePage() {
             <div className="flex gap-3 overflow-x-auto pb-1">
               {dogs.map((dog) => (
                 <Link key={dog.id} href={`/uchinoko/${dog.id}`} className="w-28 flex-shrink-0">
-                  <div className="bg-white rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="aspect-[3/4] bg-orange-50 relative">
-                      {dog.photoUrl ? (
-                        <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" sizes="112px" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <PawPrint size={28} className="text-orange-200" strokeWidth={1.5} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-2">
-                      <p className="text-xs font-bold text-gray-800 truncate">{dog.name}</p>
-                    </div>
+                  <div className="aspect-[3/4] bg-orange-50 rounded-xl overflow-hidden relative hover:shadow-md transition-shadow">
+                    {dog.photoUrl ? (
+                      <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" sizes="112px" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <PawPrint size={28} className="text-orange-200" strokeWidth={1.5} />
+                      </div>
+                    )}
                   </div>
                 </Link>
               ))}
