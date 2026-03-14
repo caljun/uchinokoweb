@@ -43,7 +43,7 @@ function AuthPageContent() {
         router.replace('/uchinoko')
       } else {
         await signUp(email, password, displayName, referralCode.trim().toUpperCase() || undefined, referrerDogId || undefined)
-        router.replace('/uchinoko/new')
+        router.replace('/uchinoko')
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '認証に失敗しました'
