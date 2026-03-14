@@ -14,8 +14,7 @@ export default function PrivacyPage() {
           </button>
           <h1 className="text-2xl font-bold text-gray-900">プライバシーポリシー</h1>
         </div>
-        <p className="text-sm text-gray-400 mb-10">最終更新日：2026年1月31日</p>
-
+        <p className="text-sm text-gray-400 mb-10">最終更新日：2026年3月15日</p>
 
         <div className="space-y-8 text-sm text-gray-700 leading-relaxed">
 
@@ -42,39 +41,28 @@ export default function PrivacyPage() {
                   <li>性別、生年月日</li>
                   <li>電話番号</li>
                   <li>住所（郵便番号、都道府県、市区町村、番地、建物名）</li>
-                  <li>位置情報（店舗検索のための緯度・経度）</li>
-                  <li>お気に入り店舗・商品</li>
+                  <li>プロフィール写真</li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">3. 犬の情報</h3>
+                <h3 className="font-semibold text-gray-800 mb-2">3. ペット情報</h3>
                 <ul className="list-disc list-inside space-y-1 text-gray-600">
-                  <li>基本情報：名前、生年月日、体重、性別、去勢・避妊の有無、犬種</li>
-                  <li>行動特性：多頭飼いの有無、おもちゃ好き、一緒に寝るか、入れない部屋の有無、リード/ハーネスの種類</li>
+                  <li>基本情報：名前、生年月日、体重、性別、去勢・避妊の有無、犬種・猫種</li>
+                  <li>行動特性：性格診断に関する回答（多頭飼いの有無、おもちゃ好き、一緒に寝るか等）</li>
                   <li>診断結果：性格タイプ、しつけ難易度</li>
                   <li>写真</li>
+                  <li>日記（写真・コメント）</li>
+                  <li>健康記録</li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">4. 配送先住所（商品購入時）</h3>
+                <h3 className="font-semibold text-gray-800 mb-2">4. 利用状況データ</h3>
                 <ul className="list-disc list-inside space-y-1 text-gray-600">
-                  <li>郵便番号、住所、宛名、電話番号</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2">5. 日記</h3>
-                <ul className="list-disc list-inside space-y-1 text-gray-600">
-                  <li>写真（最大3枚）、コメント</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2">6. 端末内に保存される情報</h3>
-                <ul className="list-disc list-inside space-y-1 text-gray-600">
-                  <li>閲覧履歴（店舗の閲覧履歴は端末内にのみ保存され、サーバーには送信されません）</li>
+                  <li>ミッション参加記録・写真</li>
+                  <li>獲得ポイント・週間ポイント（ランキング用）</li>
+                  <li>招待コード（友達紹介機能）</li>
                 </ul>
               </div>
             </div>
@@ -85,21 +73,24 @@ export default function PrivacyPage() {
             <p className="mb-2">収集した情報は以下の目的で利用します。</p>
             <ol className="list-decimal list-inside space-y-1 text-gray-600">
               <li>アカウントの作成・認証</li>
-              <li>犬の診断結果の算出</li>
-              <li>店舗・商品のレコメンド</li>
-              <li>サービス予約の処理</li>
-              <li>商品の配送</li>
+              <li>ペットの診断結果の算出</li>
+              <li>ポイント・ランキングの管理</li>
+              <li>ミッション機能の提供</li>
+              <li>おすすめコンテンツの表示</li>
               <li>お問い合わせへの対応</li>
               <li>サービスの改善</li>
             </ol>
           </section>
 
           <section>
+            <h2 className="font-bold text-gray-900 mb-3">ペット情報の公開について</h2>
+            <p className="text-gray-600">登録したペット情報（名前、写真、診断結果等）は、認証済みユーザーが閲覧できる公開プロフィールページに表示されます。シェアカード機能を使って外部に共有した場合も同様です。</p>
+          </section>
+
+          <section>
             <h2 className="font-bold text-gray-900 mb-3">第三者への提供</h2>
-            <p className="mb-2">以下の場合に、必要な情報を提供します。</p>
+            <p className="mb-2">以下の場合を除き、収集した情報を第三者に提供することはありません。</p>
             <ol className="list-decimal list-inside space-y-2 text-gray-600">
-              <li><span className="font-semibold text-gray-800">店舗への提供</span>：予約時に犬の情報（名前、犬種、診断結果等）、購入時に配送先住所を該当店舗に提供します</li>
-              <li><span className="font-semibold text-gray-800">決済処理</span>：Stripe社に決済に必要な情報を提供します</li>
               <li><span className="font-semibold text-gray-800">法令に基づく場合</span>：法的要請があった場合</li>
             </ol>
           </section>
@@ -132,9 +123,9 @@ export default function PrivacyPage() {
                     <td className="px-3 py-2 border border-gray-200">写真の保存</td>
                   </tr>
                   <tr className="bg-gray-50">
-                    <td className="px-3 py-2 border border-gray-200">Stripe</td>
-                    <td className="px-3 py-2 border border-gray-200">Stripe, Inc.</td>
-                    <td className="px-3 py-2 border border-gray-200">決済処理</td>
+                    <td className="px-3 py-2 border border-gray-200">Cloud Functions</td>
+                    <td className="px-3 py-2 border border-gray-200">Google</td>
+                    <td className="px-3 py-2 border border-gray-200">ポイント付与・招待処理</td>
                   </tr>
                 </tbody>
               </table>
@@ -143,7 +134,6 @@ export default function PrivacyPage() {
               <p>各サービスのプライバシーポリシー：</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>Google：<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">https://policies.google.com/privacy</a></li>
-                <li>Stripe：<a href="https://stripe.com/jp/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">https://stripe.com/jp/privacy</a></li>
               </ul>
             </div>
           </section>
@@ -166,7 +156,6 @@ export default function PrivacyPage() {
             <ol className="list-decimal list-inside space-y-2 text-gray-600">
               <li><span className="font-semibold text-gray-800">アクセス・訂正</span>：アプリ内でご自身のデータを確認・編集できます</li>
               <li><span className="font-semibold text-gray-800">削除</span>：アカウント削除によりデータを削除できます</li>
-              <li><span className="font-semibold text-gray-800">公開設定</span>：犬の情報の公開/非公開を設定できます</li>
             </ol>
           </section>
 
