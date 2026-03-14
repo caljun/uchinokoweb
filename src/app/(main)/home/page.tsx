@@ -18,6 +18,7 @@ interface Recommendation {
   order?: number
   targetAgeGroups?: number[] | null
   targetSizes?: number[] | null
+  targetPetType?: 'dog' | 'cat' | null  // null または未設定 = 全ペット対象
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -26,14 +27,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   grooming: 'トリミング',
   goods: 'グッズ',
   service: 'サービス',
+  cat_food: 'キャットフード',
+  cat_goods: '猫グッズ',
+  cat_grooming: '猫用グルーミング',
   other: 'その他',
 }
 
-const AGE_LABELS: Record<number, string> = {
-  0: 'パピー',
-  1: '成犬',
-  2: 'シニア',
-}
+const DOG_AGE_LABELS: Record<number, string> = { 0: 'パピー', 1: '成犬', 2: 'シニア' }
+const CAT_AGE_LABELS: Record<number, string> = { 0: '子猫', 1: '成猫', 2: 'シニア' }
 
 const SIZE_LABELS: Record<number, string> = {
   0: '小型犬',
@@ -47,6 +48,7 @@ interface DogProfile {
   photoUrl?: string
   ageGroup: number | null
   breedSize: number | null
+  petType?: 'dog' | 'cat'
 }
 
 function calcScore(item: Recommendation, ageGroup: number | null, breedSize: number | null): number {
@@ -91,6 +93,7 @@ export default function HomePage() {
             photoUrl: data.photos?.[0] ?? data.photoUrl ?? undefined,
             ageGroup: typeof data.ageGroup === 'number' ? data.ageGroup : null,
             breedSize: typeof data.breedSize === 'number' ? data.breedSize : null,
+            petType: data.petType ?? 'dog',
           }
         })
         setDogs(list)
@@ -118,7 +121,12 @@ export default function HomePage() {
   const loading = authLoading || dogLoading
 
   const selectedDog = dogs.find((d) => d.id === selectedDogId) ?? null
-  const items = sortByDogProfile(allRecommendations, selectedDog?.ageGroup ?? null, selectedDog?.breedSize ?? null)
+  const petType = selectedDog?.petType ?? 'dog'
+  const ageLabels = petType === 'cat' ? CAT_AGE_LABELS : DOG_AGE_LABELS
+  const filteredRecommendations = allRecommendations.filter(
+    (r) => !r.targetPetType || r.targetPetType === petType
+  )
+  const items = sortByDogProfile(filteredRecommendations, selectedDog?.ageGroup ?? null, selectedDog?.breedSize ?? null)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -141,7 +149,9 @@ export default function HomePage() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={dog.photoUrl} alt={dog.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-orange-100 flex items-center justify-center text-lg">🐕</div>
+                    <div className="w-full h-full bg-orange-100 flex items-center justify-center text-lg">
+                      {dog.petType === 'cat' ? '🐱' : '🐕'}
+                    </div>
                   )}
                 </div>
                 <span className={`text-xs font-medium max-w-[52px] truncate ${
@@ -206,7 +216,7 @@ export default function HomePage() {
                     </span>
                     {item.targetAgeGroups?.map((ag) => (
                       <span key={ag} className="text-xs font-medium text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
-                        {AGE_LABELS[ag]}
+                        {ageLabels[ag]}
                       </span>
                     ))}
                     {item.targetSizes?.map((sz) => (

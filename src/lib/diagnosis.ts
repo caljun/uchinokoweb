@@ -297,6 +297,40 @@ function toDate(val: unknown): Date | null {
   return null
 }
 
+/** 猫の人間年齢換算（獣医学的標準式）: 1歳=15、2歳=24、以降+4/年 */
+export function getCatHumanAge(birthDate: unknown): number | null {
+  const date = toDate(birthDate)
+  if (!date) return null
+
+  const now = new Date()
+  const years =
+    now.getFullYear() -
+    date.getFullYear() -
+    (now.getMonth() < date.getMonth() ||
+    (now.getMonth() === date.getMonth() && now.getDate() < date.getDate())
+      ? 1
+      : 0)
+
+  if (years === 0) {
+    const months =
+      (now.getFullYear() - date.getFullYear()) * 12 +
+      (now.getMonth() - date.getMonth()) -
+      (now.getDate() < date.getDate() ? 1 : 0)
+    return Math.max(1, Math.round(months * 1.25))
+  }
+  if (years === 1) return 15
+  if (years === 2) return 24
+  return 24 + (years - 2) * 4
+}
+
+/** 「2歳（24歳）」形式で返す（猫版） */
+export function getCatAgeDisplayText(birthDate: unknown): string {
+  const actual = getActualAgeText(birthDate)
+  if (actual === '未設定') return '未設定'
+  const human = getCatHumanAge(birthDate)
+  return human !== null ? `${actual}（${human}歳）` : actual
+}
+
 /** birthDate から「2歳」「3ヶ月」「5日」を返す */
 export function getActualAgeText(birthDate: unknown): string {
   const date = toDate(birthDate)

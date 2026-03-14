@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Dog, Diary, HealthRecord } from '@/types/dog'
 import { Pencil, Share2, Target, UserPlus } from 'lucide-react'
 import { ShareCardsModal } from '@/components/share/ShareCardsModal'
-import { getBreedDescription, getAgeDisplayText } from '@/lib/diagnosis'
+import { getBreedDescription, getAgeDisplayText, getCatAgeDisplayText } from '@/lib/diagnosis'
 
 type Tab = 'info' | 'gallery' | 'health'
 
@@ -34,14 +34,6 @@ const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
     '特定の人になつきやすく、その他の人には人見知りをするタイプです。\nいつも抱っこされていたいと思っています。\n環境の変化は苦手なので、社会化を意識して取り組みましょう。',
 }
 
-function getCatAgeDisplayText(birthDate: Date | { toDate?: () => Date }): string {
-  const date = birthDate instanceof Date ? birthDate : birthDate.toDate?.() ?? new Date()
-  const now = new Date()
-  const months = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth())
-  if (months < 12) return `${months}ヶ月`
-  const years = Math.floor(months / 12)
-  return `${years}歳`
-}
 
 export default function UchinokoDetailPage() {
   const { dogId } = useParams<{ dogId: string }>()
