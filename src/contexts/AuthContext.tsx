@@ -154,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         await fetchOwner(firebaseUser.uid)
         registerPushToken(firebaseUser.uid)
+        updateDoc(doc(db, 'owners', firebaseUser.uid), { lastOpenedAt: serverTimestamp() }).catch(() => {})
       } else {
         setOwner(null)
         setHasDog(null)
