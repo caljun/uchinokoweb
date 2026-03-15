@@ -219,15 +219,15 @@ function UchinokoContent() {
                   <Star size={16} className="text-orange-400" fill="currentColor" />
                   <span className="text-lg font-black text-orange-500">+10ポイント獲得！</span>
                 </div>
-                <div className="w-full bg-orange-50 rounded-2xl p-4 mb-6 text-left">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="w-full bg-orange-50 rounded-2xl p-4 mb-6">
+                  <div className="flex items-center justify-center gap-2 mb-2">
                     <Trophy size={16} className="text-orange-500" />
                     <p className="text-sm font-bold text-orange-500">ランキングとは？</p>
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">
+                  <p className="text-sm text-gray-700 leading-relaxed text-center">
                     ミッションをこなすごとにポイントが貯まり、<span className="font-bold">毎週リセット</span>されるランキングで順位が決まります。
                   </p>
-                  <p className="text-sm text-gray-700 leading-relaxed mt-2">
+                  <p className="text-sm text-gray-700 leading-relaxed mt-2 text-center">
                     毎日ミッションをこなして、<span className="font-bold">ウチの子を1位</span>にしよう！
                   </p>
                 </div>
