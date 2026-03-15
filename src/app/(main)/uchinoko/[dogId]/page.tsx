@@ -82,7 +82,7 @@ export default function UchinokoDetailPage() {
   if (!dog) return null
 
   const isCat = dog.petType === 'cat'
-  const slideCount = isCat ? 2 : 3
+  const slideCount = isCat ? 2 : 4
   const petEmoji = isCat ? '🐱' : '🐾'
 
   return (
@@ -168,9 +168,13 @@ export default function UchinokoDetailPage() {
 
                   {/* 2枚目: 基本情報（犬・猫共通） */}
                   <div className="w-full shrink-0 px-1">
-                    <div className="space-y-4">
-                      <SummaryCard dog={dog} />
-                      {!isCat && (
+                    <SummaryCard dog={dog} />
+                  </div>
+
+                  {/* 3枚目: 犬のタイプ＋犬種の特徴（犬のみ） */}
+                  {!isCat && (
+                    <div className="w-full shrink-0 px-1">
+                      <div className="space-y-4 max-h-[450px] overflow-y-auto lg:max-h-none lg:overflow-visible">
                         <InfoCard title="犬のタイプ">
                           <p className="text-xs text-gray-400 mb-1">性格タイプ</p>
                           <p className="text-base font-semibold text-gray-800">{dog.temperamentType}</p>
@@ -180,14 +184,7 @@ export default function UchinokoDetailPage() {
                             </p>
                           )}
                         </InfoCard>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* 3枚目: 犬種の特徴（犬のみ） */}
-                  {!isCat && (
-                    <div className="w-full shrink-0 px-1">
-                      <div className="space-y-4 max-h-[450px] overflow-y-auto lg:max-h-none lg:overflow-visible">
                         <InfoCard title="犬種の特徴">
                           {(() => {
                             const info = getBreedDescription(dog.breed)
@@ -207,7 +204,14 @@ export default function UchinokoDetailPage() {
                             )
                           })()}
                         </InfoCard>
+                      </div>
+                    </div>
+                  )}
 
+                  {/* 4枚目: 詳細説明（犬のみ） */}
+                  {!isCat && (
+                    <div className="w-full shrink-0 px-1">
+                      <div className="max-h-[450px] overflow-y-auto lg:max-h-none lg:overflow-visible">
                         <InfoCard title="詳細説明">
                           {dog.difficultyDescription ? (
                             <div className="space-y-3 text-sm text-gray-500">
@@ -372,13 +376,9 @@ function SummaryCard({ dog }: { dog: Dog }) {
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-      <div className="mb-4">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-bold text-gray-900 truncate">{dog.name}</h2>
-          <span className="text-xs text-gray-400">基本情報</span>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
+      <p className="text-xs text-gray-400 mb-3">基本情報</p>
+      <div className="flex flex-col gap-3">
+        <SummaryTile label="名前" icon="🏷️" value={dog.name} />
         <SummaryTile label="年齢" icon="📅" value={ageLabel} />
         <SummaryTile label="性別" icon="⚥" value={neuteredLabel} />
         <SummaryTile label="体重" icon="⚖️" value={`${dog.weight}kg`} />
@@ -394,12 +394,12 @@ function SummaryCard({ dog }: { dog: Dog }) {
 
 function SummaryTile({ label, icon, value }: { label: string; icon: string; value: string }) {
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/80 px-3 py-3">
-      <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+    <div className="flex items-center justify-between px-3 py-3 rounded-xl border border-gray-100 bg-gray-50/80">
+      <div className="flex items-center gap-1.5 text-xs text-gray-400">
         <span>{icon}</span>
         <span>{label}</span>
       </div>
-      <p className="text-sm font-semibold text-gray-800 break-words">{value}</p>
+      <p className="text-sm font-semibold text-gray-800 break-words text-right max-w-[60%]">{value}</p>
     </div>
   )
 }

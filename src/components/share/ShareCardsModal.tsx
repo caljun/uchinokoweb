@@ -16,10 +16,11 @@ type Props = {
 }
 
 export function ShareCardsModal({ dog, onClose }: Props) {
-  const card1Ref = useRef<HTMLDivElement>(null)
-  const card2Ref = useRef<HTMLDivElement>(null)
-  const card3Ref = useRef<HTMLDivElement>(null)  // 犬のみ: 犬種+難易度
-  const card4Ref = useRef<HTMLDivElement>(null)  // QR（犬4枚目、猫3枚目）
+  const card1Ref = useRef<HTMLDivElement>(null) // 写真（共通）
+  const card2Ref = useRef<HTMLDivElement>(null) // 基本情報（共通）
+  const card3Ref = useRef<HTMLDivElement>(null) // タイプ＋犬種（犬のみ）
+  const card4Ref = useRef<HTMLDivElement>(null) // 詳細説明（犬のみ）
+  const card5Ref = useRef<HTMLDivElement>(null) // QR（共通）
 
   const [photoSrc, setPhotoSrc] = useState<string>('')
   const [qrSrc, setQrSrc] = useState<string>('')
@@ -33,7 +34,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   const genderLabel = dog.gender === 'male' ? 'オス' : 'メス'
   const genderFull = dog.neutered ? `${genderLabel}（去勢・避妊済み）` : genderLabel
 
-  // 犬のみ
   const typeDesc = (!isCat && dog.temperamentType) ? (({
     リーダータイプ: '知恵があり勇敢なまとめ役タイプです。\n犬社会と人間社会での自分の役割を理解しており、人の役に立ちたいと思っています。\n仕事を与えて達成感を味わわせてあげましょう。',
     右腕タイプ: '活発で楽観的、好奇心旺盛なタイプです。\n目立つ失敗をすることもありますが、リーダータイプの犬や人のもとで能力が向上します。\n運動と刺激をしっかり与えてあげましょう。',
@@ -43,7 +43,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   const breedInfo = !isCat ? getBreedDescription(dog.breed) : { origin: '', purpose: '', pros: '', cons: '', chip: '' }
   const diffParagraphs = !isCat ? (dog.difficultyDescription ?? '').split('\n\n').filter(Boolean) : []
 
-  // Step1a: 写真 base64
   useEffect(() => {
     if (!dog.photoUrl) { setPhotoSrc(''); return }
     fetch(`/api/image-proxy?url=${encodeURIComponent(dog.photoUrl)}`)
@@ -58,7 +57,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
       .catch(() => setPhotoSrc(''))
   }, [dog.photoUrl])
 
-  // Step1b: QRコード生成
   useEffect(() => {
     import('qrcode').then((QRCode) => {
       QRCode.toDataURL(LP_URL, { width: 300, margin: 2, color: { dark: '#1f2937', light: '#ffffff' } })
@@ -75,10 +73,10 @@ export function ShareCardsModal({ dog, onClose }: Props) {
       await new Promise((r) => setTimeout(r, 300))
       const html2canvas = (await import('html2canvas')).default
 
-      // 猫: card1, card2, card4 / 犬: card1, card2, card3, card4
+      // 猫: card1, card2, card5 / 犬: card1, card2, card3, card4, card5
       const refs = isCat
-        ? [card1Ref, card2Ref, card4Ref]
-        : [card1Ref, card2Ref, card3Ref, card4Ref]
+        ? [card1Ref, card2Ref, card5Ref]
+        : [card1Ref, card2Ref, card3Ref, card4Ref, card5Ref]
 
       const urls: string[] = []
       const files: File[] = []
@@ -171,12 +169,19 @@ export function ShareCardsModal({ dog, onClose }: Props) {
     flexShrink: 0,
   }
 
-  const cardCount = isCat ? 3 : 4
+  const cardCount = isCat ? 3 : 5
+
+  // 基本情報の行スタイル
+  const infoRow = (label: string, value: string) => (
+    <div key={label} style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', borderBottom: '1px solid #f3f4f6' }}>
+      <p style={{ fontSize: 22, color: '#9ca3af', margin: 0, fontWeight: 500, flexShrink: 0 }}>{label}</p>
+      <p style={{ fontSize: 22, fontWeight: 600, color: '#1f2937', margin: 0, flex: 1, textAlign: 'center' }}>{value}</p>
+    </div>
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
       <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden">
-        {/* ヘッダー */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div>
             <p className="font-bold text-gray-900 text-base">シェアカード</p>
@@ -192,7 +197,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           </button>
         </div>
 
-        {/* カードプレビュー */}
         {loading ? (
           <div className="flex items-center justify-center py-14">
             <Loader2 size={32} className="animate-spin text-orange-400" />
@@ -212,7 +216,6 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           </div>
         )}
 
-        {/* シェアボタン */}
         <div className="px-5 pb-8">
           <button
             onClick={handleShare}
@@ -228,10 +231,10 @@ export function ShareCardsModal({ dog, onClose }: Props) {
         </div>
       </div>
 
-      {/* ───── オフスクリーンカード（html2canvas 用） ───── */}
+      {/* ───── オフスクリーンカード ───── */}
       <div style={{ position: 'fixed', top: 0, left: '-9999px', pointerEvents: 'none' }}>
 
-        {/* CARD 1: Photo（犬・猫共通） */}
+        {/* CARD 1: 写真（共通） */}
         <div ref={card1Ref} style={{ ...baseCard, backgroundColor: '#FFF7ED' }}>
           {(photoSrc || dog.photoUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -256,93 +259,88 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           </div>
         </div>
 
-        {/* CARD 2: Info（犬・猫共通、ただし猫は性格タイプなし） */}
-        <div ref={card2Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '88px 36px 36px' }}>
+        {/* CARD 2: 基本情報（共通） */}
+        <div ref={card2Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '88px 48px 48px' }}>
           <div style={{ position: 'absolute', top: 28, left: 32 }}>
             <p style={{ fontSize: 24, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
           </div>
 
-          <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '18px 24px', marginBottom: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.08)', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
-            <p style={{ fontSize: 15, color: '#9ca3af', margin: 0, fontWeight: 500 }}>名前</p>
-            <p style={{ fontSize: 36, fontWeight: 800, color: '#111827', margin: 0, textAlign: 'center' }}>{dog.name}</p>
-            <span />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-            {[
-              { icon: '📅', label: '年齢', value: ageLabel },
-              { icon: isCat ? '🐱' : '🐾', label: '性別', value: genderFull },
-              { icon: '⚖️', label: '体重', value: `${dog.weight} kg` },
-              isCat
-                ? { icon: '🎨', label: '毛色・柄', value: dog.coatPattern ?? dog.breed }
-                : { icon: '🐕', label: '犬種', value: dog.breed },
-            ].map(({ icon, label, value }) => (
-              <div key={label} style={{ backgroundColor: 'white', borderRadius: 16, padding: '14px 18px 16px', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
-                <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 5px', fontWeight: 500 }}>{icon} {label}</p>
-                <p style={{ fontSize: 17, fontWeight: 600, color: '#1f2937', margin: 0, paddingBottom: 6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* 性格タイプ（犬のみ） */}
-          {!isCat && dog.temperamentType && (
-            <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '20px 24px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
-              <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 8px', fontWeight: 600, letterSpacing: '0.05em' }}>✦ 性格タイプ</p>
-              <p style={{ fontSize: 28, fontWeight: 700, color: '#f97316', margin: '0 0 10px', lineHeight: 1.2 }}>{dog.temperamentType}</p>
-              <p style={{ fontSize: 17, color: '#6b7280', lineHeight: 1.8, margin: 0 }}>
-                {typeDesc.split('\n').join('　')}
-              </p>
+          <div style={{ backgroundColor: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+            <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid #f3f4f6' }}>
+              <p style={{ fontSize: 13, color: '#9ca3af', margin: 0, fontWeight: 600, letterSpacing: '0.05em' }}>基本情報</p>
             </div>
-          )}
+            {infoRow('名前', dog.name)}
+            {infoRow('年齢', ageLabel)}
+            {infoRow('性別', genderFull)}
+            {infoRow('体重', `${dog.weight} kg`)}
+            {isCat
+              ? infoRow('毛色・柄', dog.coatPattern ?? dog.breed)
+              : infoRow('犬種', dog.breed)
+            }
+          </div>
         </div>
 
-        {/* CARD 3: 犬種+難易度（犬のみ） */}
+        {/* CARD 3: タイプ＋犬種の特徴（犬のみ） */}
         {!isCat && (
-          <div ref={card3Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '88px 36px 36px' }}>
+          <div ref={card3Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '88px 48px 48px' }}>
             <div style={{ position: 'absolute', top: 28, left: 32 }}>
               <p style={{ fontSize: 24, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
             </div>
 
+            <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '20px 24px', marginBottom: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+              <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 8px', fontWeight: 600, letterSpacing: '0.05em' }}>✦ 犬のタイプ</p>
+              <p style={{ fontSize: 28, fontWeight: 700, color: '#f97316', margin: '0 0 10px', lineHeight: 1.2 }}>{dog.temperamentType}</p>
+              <p style={{ fontSize: 20, color: '#6b7280', lineHeight: 1.8, margin: 0 }}>
+                {typeDesc.split('\n').join('　')}
+              </p>
+            </div>
+
             {(breedInfo.purpose || breedInfo.pros) && (
-              <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '16px 20px', marginBottom: 10, boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
-                <p style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: '0 0 10px' }}>🐶 {dog.breed}の特徴</p>
+              <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '16px 20px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+                <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 10px', fontWeight: 600, letterSpacing: '0.05em' }}>🐶 犬種の特徴</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {breedInfo.origin && (
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <p style={{ fontSize: 13, color: '#9ca3af', margin: 0, minWidth: 44, fontWeight: 500 }}>原産国</p>
-                      <p style={{ fontSize: 14, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.origin}</p>
+                      <p style={{ fontSize: 20, color: '#9ca3af', margin: 0, minWidth: 44, fontWeight: 500 }}>原産国</p>
+                      <p style={{ fontSize: 20, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.origin}</p>
                     </div>
                   )}
                   {breedInfo.purpose && (
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <p style={{ fontSize: 13, color: '#9ca3af', margin: 0, minWidth: 44, fontWeight: 500 }}>目的</p>
-                      <p style={{ fontSize: 14, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.purpose}</p>
+                      <p style={{ fontSize: 20, color: '#9ca3af', margin: 0, minWidth: 44, fontWeight: 500 }}>目的</p>
+                      <p style={{ fontSize: 20, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.purpose}</p>
                     </div>
                   )}
                   {breedInfo.pros && (
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <p style={{ fontSize: 13, color: '#22c55e', margin: 0, minWidth: 44, fontWeight: 600 }}>長所</p>
-                      <p style={{ fontSize: 14, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.pros}</p>
+                      <p style={{ fontSize: 20, color: '#22c55e', margin: 0, minWidth: 44, fontWeight: 600 }}>長所</p>
+                      <p style={{ fontSize: 20, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.pros}</p>
                     </div>
                   )}
                   {breedInfo.cons && (
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <p style={{ fontSize: 13, color: '#f87171', margin: 0, minWidth: 44, fontWeight: 600 }}>短所</p>
-                      <p style={{ fontSize: 14, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.cons}</p>
+                      <p style={{ fontSize: 20, color: '#f87171', margin: 0, minWidth: 44, fontWeight: 600 }}>短所</p>
+                      <p style={{ fontSize: 20, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.cons}</p>
                     </div>
                   )}
                 </div>
-                {breedInfo.chip && (
-                  <p style={{ fontSize: 13, color: '#6b7280', margin: '10px 0 0', lineHeight: 1.7, borderTop: '1px solid #f3f4f6', paddingTop: 10 }}>{breedInfo.chip}</p>
-                )}
               </div>
             )}
+          </div>
+        )}
 
-            <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '16px 20px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
-              <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 8px', fontWeight: 600, letterSpacing: '0.05em' }}>✦ 詳細説明</p>
+        {/* CARD 4: 詳細説明（犬のみ） */}
+        {!isCat && (
+          <div ref={card4Ref} style={{ ...baseCard, backgroundColor: '#F2F2F7', padding: '88px 48px 48px' }}>
+            <div style={{ position: 'absolute', top: 28, left: 32 }}>
+              <p style={{ fontSize: 24, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
+            </div>
+
+            <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '20px 24px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+              <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 12px', fontWeight: 600, letterSpacing: '0.05em' }}>✦ 詳細説明</p>
               <div>
-                {diffParagraphs.slice(0, 3).map((p, i) => (
-                  <p key={i} style={{ fontSize: 14, color: '#374151', lineHeight: 1.8, margin: i > 0 ? '8px 0 0' : '0' }}>
+                {diffParagraphs.slice(0, 4).map((p, i) => (
+                  <p key={i} style={{ fontSize: 20, color: '#374151', lineHeight: 1.8, margin: i > 0 ? '10px 0 0' : '0' }}>
                     {p.replace(/\n/g, '')}
                   </p>
                 ))}
@@ -351,8 +349,8 @@ export function ShareCardsModal({ dog, onClose }: Props) {
           </div>
         )}
 
-        {/* CARD 4(犬) / CARD 3(猫): QR */}
-        <div ref={card4Ref} style={{ ...baseCard, background: 'linear-gradient(145deg, #FF8F0D 0%, #f97316 40%, #ea580c 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 48px' }}>
+        {/* CARD 5(犬) / CARD 3(猫): QR */}
+        <div ref={card5Ref} style={{ ...baseCard, background: 'linear-gradient(145deg, #FF8F0D 0%, #f97316 40%, #ea580c 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 48px' }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
             <p style={{ fontSize: 36, fontWeight: 800, color: 'white', margin: 0, letterSpacing: '0.04em' }}>ウチの子</p>
             <p style={{ fontSize: 20, color: 'rgba(255,255,255,0.85)', margin: '10px 0 0', fontWeight: 500 }}>
