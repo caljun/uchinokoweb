@@ -16,7 +16,7 @@ export function OnboardingGuard() {
     if (!owner?.photoUrl) {
       router.replace('/onboarding/profile')
     } else if (hasDog === false) {
-      router.replace('/onboarding/dog')
+      router.replace('/onboarding/pet-type')
     }
   }, [loading, user, owner, hasDog, router])
 

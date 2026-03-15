@@ -162,8 +162,9 @@ export default function OnboardingDogPage() {
         {/* ヘッダー */}
         <div className="bg-white px-5 pt-12 pb-4 sticky top-0 z-10 border-b border-gray-100">
           <div className="mb-3">
-            <p className="text-xs text-gray-400 mb-1">STEP 2 / 2</p>
+            <p className="text-xs text-gray-400 mb-1">STEP 3 / 3</p>
             <div className="flex gap-1.5">
+              <div className="h-1 flex-1 rounded-full bg-orange-400" />
               <div className="h-1 flex-1 rounded-full bg-orange-400" />
               <div className="h-1 flex-1 rounded-full bg-orange-400" />
             </div>
@@ -171,7 +172,7 @@ export default function OnboardingDogPage() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => step === 0 ? router.push('/onboarding/profile') : setStep((step - 1) as Step)}
+              onClick={() => step === 0 ? router.push('/onboarding/pet-type') : setStep((step - 1) as Step)}
               className="text-gray-500 text-xl"
             >
               ←

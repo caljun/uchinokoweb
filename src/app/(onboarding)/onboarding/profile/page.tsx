@@ -37,7 +37,7 @@ export default function OnboardingProfilePage() {
       const photoUrl = await getDownloadURL(storageRef)
       await updateDoc(doc(db, 'owners', user.uid), { photoUrl })
       await reloadOwner()
-      router.push('/onboarding/dog')
+      router.push('/onboarding/pet-type')
     } catch {
       setError('保存に失敗しました。もう一度お試しください。')
     } finally {
@@ -48,9 +48,10 @@ export default function OnboardingProfilePage() {
   return (
     <div className="min-h-screen bg-white flex flex-col px-6 pt-16 pb-10">
       <div className="mb-8">
-        <p className="text-xs text-gray-400 mb-1">STEP 1 / 2</p>
+        <p className="text-xs text-gray-400 mb-1">STEP 1 / 3</p>
         <div className="flex gap-1.5">
           <div className="h-1 flex-1 rounded-full bg-orange-400" />
+          <div className="h-1 flex-1 rounded-full bg-gray-200" />
           <div className="h-1 flex-1 rounded-full bg-gray-200" />
         </div>
       </div>
@@ -85,7 +86,7 @@ export default function OnboardingProfilePage() {
           {saving ? '保存中...' : '次へ →'}
         </button>
         <button
-          onClick={() => router.push('/onboarding/dog')}
+          onClick={() => router.push('/onboarding/pet-type')}
           className="w-full py-3 text-gray-400 text-sm"
         >
           スキップ
