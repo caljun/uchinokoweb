@@ -10,7 +10,7 @@ export default function RootPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/uchinoko')
+      router.replace('/profile')
     }
   }, [user, loading, router])
 

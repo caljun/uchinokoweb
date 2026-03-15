@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 
 const NAV_ITEMS = [
-  { href: '/uchinoko', label: 'ウチの子', Icon: PawPrint },
+  { href: '/profile', label: 'マイページ', Icon: PawPrint },
   { href: '/missions', label: 'ミッション', Icon: Target },
   { href: '/ranking', label: 'ランキング', Icon: Trophy },
   { href: '/home', label: 'おすすめ', Icon: Home },

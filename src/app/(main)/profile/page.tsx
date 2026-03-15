@@ -3,19 +3,22 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { collection, query, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dog } from '@/types/dog'
-import { PawPrint, UserPlus, Settings, ChevronRight, Plus, Copy, Check } from 'lucide-react'
+import { PawPrint, UserPlus, Settings, ChevronRight, Plus, Copy, Check, X } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, owner } = useAuth()
   const { openAuthModal } = useAuthModal()
+  const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [dogs, setDogs] = useState<Dog[]>([])
   const [loadingDogs, setLoadingDogs] = useState(true)
+  const [showPetModal, setShowPetModal] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -92,32 +95,35 @@ export default function ProfilePage() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-700">ウチの子</h2>
-            <Link href="/uchinoko/new" className="flex items-center gap-1 text-xs text-orange-500 font-medium">
+            <button
+              onClick={() => setShowPetModal(true)}
+              className="flex items-center gap-1 text-xs text-orange-500 font-medium"
+            >
               <Plus size={14} />
               追加
-            </Link>
+            </button>
           </div>
 
           {loadingDogs ? (
             <div className="flex gap-3 overflow-x-auto pb-1">
               {[1, 2].map((i) => (
-                <div key={i} className="w-28 flex-shrink-0 bg-gray-200 rounded-xl aspect-[3/4] animate-pulse" />
+                <div key={i} className="w-52 flex-shrink-0 bg-gray-200 rounded-xl aspect-[3/4] animate-pulse" />
               ))}
             </div>
           ) : dogs.length === 0 ? (
-            <Link href="/uchinoko/new">
+            <button onClick={() => setShowPetModal(true)} className="w-full">
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center gap-3 text-gray-400 hover:border-orange-300 hover:text-orange-400 transition-colors">
                 <PawPrint size={32} strokeWidth={1.5} />
                 <p className="text-sm">最初の子を登録する</p>
               </div>
-            </Link>
+            </button>
           ) : (
             <div className="flex gap-3 overflow-x-auto pb-1">
               {dogs.map((dog) => (
-                <Link key={dog.id} href={`/uchinoko/${dog.id}`} className="w-28 flex-shrink-0">
+                <Link key={dog.id} href={`/uchinoko/${dog.id}`} className="w-52 flex-shrink-0">
                   <div className="aspect-[3/4] bg-orange-50 rounded-xl overflow-hidden relative hover:shadow-md transition-shadow">
                     {dog.photoUrl ? (
-                      <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" sizes="112px" />
+                      <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" sizes="208px" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <PawPrint size={28} className="text-orange-200" strokeWidth={1.5} />
@@ -126,14 +132,50 @@ export default function ProfilePage() {
                   </div>
                 </Link>
               ))}
-              <Link href="/uchinoko/new" className="w-28 flex-shrink-0">
+              <button onClick={() => setShowPetModal(true)} className="w-52 flex-shrink-0">
                 <div className="aspect-[3/4] border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center hover:border-orange-300 transition-colors">
                   <Plus size={24} className="text-gray-300" />
                 </div>
-              </Link>
+              </button>
             </div>
           )}
         </section>
+
+        {/* 犬/猫選択モーダル */}
+        {showPetModal && (
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6"
+            onClick={() => setShowPetModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl p-6 w-full max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-gray-800">ウチの子はどっち？</h2>
+                <button onClick={() => setShowPetModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowPetModal(false); router.push('/uchinoko/new') }}
+                  className="flex-1 flex flex-col items-center gap-2 py-6 bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors"
+                >
+                  <span className="text-4xl">🐶</span>
+                  <span className="font-bold text-gray-800">犬</span>
+                </button>
+                <button
+                  onClick={() => { setShowPetModal(false); router.push('/uchinoko/new-cat') }}
+                  className="flex-1 flex flex-col items-center gap-2 py-6 bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors"
+                >
+                  <span className="text-4xl">🐱</span>
+                  <span className="font-bold text-gray-800">猫</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 友達 */}
         <section>

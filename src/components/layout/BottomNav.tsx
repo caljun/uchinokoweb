@@ -3,15 +3,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Target, Trophy, Home, PawPrint, User } from 'lucide-react'
+import { Target, Trophy, Home, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-
-const NAV_ITEMS = [
-  { href: '/uchinoko', label: 'ウチの子', Icon: PawPrint },
-  { href: '/missions', label: 'ミッション', Icon: Target },
-  { href: '/ranking', label: 'ランキング', Icon: Trophy },
-  { href: '/home', label: 'おすすめ', Icon: Home },
-]
 
 export default function BottomNav() {
   const pathname = usePathname()
@@ -26,21 +19,7 @@ export default function BottomNav() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      {NAV_ITEMS.map(({ href, label, Icon }) => {
-        const active = pathname.startsWith(href)
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
-              active ? 'text-orange-500' : 'text-gray-400'
-            }`}
-          >
-            <Icon size={24} />
-            <span className="text-xs font-medium">{label}</span>
-          </Link>
-        )
-      })}
+      {/* マイページ（先頭） */}
       <Link
         href="/profile"
         className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
@@ -56,6 +35,27 @@ export default function BottomNav() {
         </div>
         <span className="text-xs font-medium">マイページ</span>
       </Link>
+
+      {/* ミッション / ランキング / おすすめ */}
+      {[
+        { href: '/missions', label: 'ミッション', Icon: Target },
+        { href: '/ranking', label: 'ランキング', Icon: Trophy },
+        { href: '/home', label: 'おすすめ', Icon: Home },
+      ].map(({ href, label, Icon }) => {
+        const active = pathname.startsWith(href)
+        return (
+          <Link
+            key={href}
+            href={href}
+            className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
+              active ? 'text-orange-500' : 'text-gray-400'
+            }`}
+          >
+            <Icon size={24} />
+            <span className="text-xs font-medium">{label}</span>
+          </Link>
+        )
+      })}
     </nav>
   )
 }
