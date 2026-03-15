@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -15,6 +15,14 @@ import { Plus, PawPrint, ChevronRight, X, Camera, Star, Trophy } from 'lucide-re
 type WelcomeState = 'idle' | 'uploading' | 'success'
 
 export default function UchinokoPage() {
+  return (
+    <Suspense>
+      <UchinokoContent />
+    </Suspense>
+  )
+}
+
+function UchinokoContent() {
   const { user, addMissionPoints } = useAuth()
   const { openAuthModal } = useAuthModal()
   const [dogs, setDogs] = useState<Dog[]>([])
