@@ -145,49 +145,7 @@ export default function UchinokoDetailPage() {
                   <Pencil size={14} />
                   編集
                 </Link>
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-500 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors"
-                >
-                  <Trash2 size={14} />
-                  削除
-                </button>
               </div>
-
-              {/* 削除確認ダイアログ */}
-              {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
-                  <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-                    <h2 className="text-lg font-bold text-gray-900 mb-2">削除の確認</h2>
-                    <p className="text-sm text-gray-500 mb-6">
-                      {dog.name}を削除しますか？この操作は取り消せません。
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => setShowDeleteConfirm(false)}
-                        disabled={deleting}
-                        className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
-                      >
-                        キャンセル
-                      </button>
-                      <button
-                        onClick={handleDelete}
-                        disabled={deleting}
-                        className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                      >
-                        {deleting ? (
-                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <Trash2 size={14} />
-                            削除する
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* スライド */}
               <div
@@ -317,6 +275,52 @@ export default function UchinokoDetailPage() {
                   ))}
                 </div>
               </div>
+
+              {/* 削除 */}
+              <div className="mt-8 pt-6 border-t border-gray-100">
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 py-3 text-red-400 text-sm hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={15} />
+                  {dog.name}を削除する
+                </button>
+              </div>
+
+              {/* 削除確認ダイアログ */}
+              {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
+                  <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+                    <h2 className="text-lg font-bold text-gray-900 mb-2">削除の確認</h2>
+                    <p className="text-sm text-gray-500 mb-6">
+                      {dog.name}を削除しますか？この操作は取り消せません。
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={deleting}
+                        className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        {deleting ? (
+                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Trash2 size={14} />
+                            削除する
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
