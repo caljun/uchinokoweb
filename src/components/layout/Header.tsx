@@ -1,9 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LogIn, PawPrint, Target, Trophy, Home } from 'lucide-react'
+import { LogIn, PawPrint, Target, Trophy, Home, Bell } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 
@@ -47,7 +46,7 @@ export default function Header() {
           ))}
         </nav>
 
-        {/* 右側: マイページ / ログイン */}
+        {/* 右側: 通知 / ログイン */}
         <div className="hidden lg:flex items-center gap-2 shrink-0">
           {user ? (
             <>
@@ -56,13 +55,9 @@ export default function Header() {
                   {owner.totalPoints}pt
                 </span>
               )}
-              <Link href="/profile">
-                <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold ring-2 transition-all ${pathname === '/profile' ? 'ring-orange-500' : 'ring-transparent hover:ring-orange-300'} ${owner?.photoUrl ? '' : 'bg-orange-100 text-orange-500'}`}>
-                  {owner?.photoUrl ? (
-                    <Image src={owner.photoUrl} alt="" width={32} height={32} className="object-cover w-full h-full" />
-                  ) : (
-                    owner?.displayName?.[0] ?? 'U'
-                  )}
+              <Link href="/notifications">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ring-2 ${pathname === '/notifications' ? 'ring-orange-500 bg-orange-50' : 'ring-transparent hover:bg-gray-100'}`}>
+                  <Bell size={18} className={pathname === '/notifications' ? 'text-orange-500' : 'text-gray-500'} />
                 </div>
               </Link>
             </>
@@ -78,15 +73,11 @@ export default function Header() {
           )}
         </div>
 
-        {/* モバイル: プロフアイコン */}
+        {/* モバイル: 通知アイコン */}
         {user ? (
-          <Link href="/profile" className="lg:hidden">
-            <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold ring-2 transition-all ${pathname === '/profile' ? 'ring-orange-500' : 'ring-transparent'} ${owner?.photoUrl ? '' : 'bg-orange-100 text-orange-500'}`}>
-              {owner?.photoUrl ? (
-                <Image src={owner.photoUrl} alt="" width={32} height={32} className="object-cover w-full h-full" />
-              ) : (
-                owner?.displayName?.[0] ?? 'U'
-              )}
+          <Link href="/notifications" className="lg:hidden">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ring-2 ${pathname === '/notifications' ? 'ring-orange-500 bg-orange-50' : 'ring-transparent'}`}>
+              <Bell size={18} className={pathname === '/notifications' ? 'text-orange-500' : 'text-gray-500'} />
             </div>
           </Link>
         ) : (

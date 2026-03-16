@@ -4,11 +4,11 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { doc, getDoc, collection, query, orderBy, getDocs } from 'firebase/firestore'
+import { doc, getDoc, collection, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Dog, Diary } from '@/types/dog'
-import { Pencil, Share2, Target, UserPlus } from 'lucide-react'
+import { Pencil, Share2, Target, UserPlus, Trash2 } from 'lucide-react'
 import { ShareCardsModal } from '@/components/share/ShareCardsModal'
 import { getBreedDescription, getAgeDisplayText, getCatAgeDisplayText } from '@/lib/diagnosis'
 
@@ -37,7 +37,20 @@ export default function UchinokoDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showShareModal, setShowShareModal] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; comment?: string; createdAt?: unknown } | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const touchStartX = useRef<number | null>(null)
+
+  const handleDelete = async () => {
+    if (!user) return
+    setDeleting(true)
+    try {
+      await deleteDoc(doc(db, 'owners', user.uid, 'dogs', dogId))
+      router.push('/uchinoko')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const handleInvite = async () => {
     if (!owner?.friendId || !dog) return
@@ -132,7 +145,49 @@ export default function UchinokoDetailPage() {
                   <Pencil size={14} />
                   編集
                 </Link>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-500 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  削除
+                </button>
               </div>
+
+              {/* 削除確認ダイアログ */}
+              {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
+                  <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+                    <h2 className="text-lg font-bold text-gray-900 mb-2">削除の確認</h2>
+                    <p className="text-sm text-gray-500 mb-6">
+                      {dog.name}を削除しますか？この操作は取り消せません。
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={deleting}
+                        className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        {deleting ? (
+                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Trash2 size={14} />
+                            削除する
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* スライド */}
               <div
