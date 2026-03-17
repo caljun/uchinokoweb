@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useState, useRef, Suspense } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { doc, getDoc, collection, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Dog, Diary } from '@/types/dog'
-import { Pencil, Share2, Target, UserPlus, Trash2 } from 'lucide-react'
+import { Pencil, Share2, Target, UserPlus, Trash2, X } from 'lucide-react'
 import { ShareCardsModal } from '@/components/share/ShareCardsModal'
 import { getBreedDescription, getAgeDisplayText, getCatAgeDisplayText } from '@/lib/diagnosis'
 
@@ -27,9 +27,19 @@ const TEMPERAMENT_DESCRIPTIONS: Record<string, string> = {
 
 
 export default function UchinokoDetailPage() {
+  return (
+    <Suspense>
+      <UchinokoDetailContent />
+    </Suspense>
+  )
+}
+
+function UchinokoDetailContent() {
   const { dogId } = useParams<{ dogId: string }>()
   const { user, owner } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(searchParams.get('welcome') === '1')
   const [dog, setDog] = useState<Dog | null>(null)
   const [diaries, setDiaries] = useState<Diary[]>([])
   const [tab, setTab] = useState<Tab>('info')
@@ -98,9 +108,41 @@ export default function UchinokoDetailPage() {
   const slideCount = isCat ? 2 : 4
   const petEmoji = isCat ? '🐱' : '🐾'
 
+  const dismissWelcome = () => {
+    setShowWelcomeBanner(false)
+    router.replace(`/uchinoko/${dogId}`)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto">
+        {/* ウェルカムバナー */}
+        {showWelcomeBanner && dog && (
+          <div className="mx-4 mt-4 bg-orange-50 border border-orange-200 rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-bold text-orange-600 mb-0.5">🎉 登録完了！</p>
+                <p className="text-sm text-gray-600">{dog.name}のシェアカードを作って友達に教えよう</p>
+              </div>
+              <button
+                type="button"
+                onClick={dismissWelcome}
+                className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setShowShareModal(true); dismissWelcome() }}
+              className="mt-3 w-full py-2.5 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <Share2 size={15} />
+              シェアカードを作る
+            </button>
+          </div>
+        )}
+
         {/* タブ */}
         <div className="bg-white border-b border-gray-100 mt-2">
           <div className="px-5 flex">

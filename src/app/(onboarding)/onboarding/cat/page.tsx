@@ -136,7 +136,7 @@ export default function OnboardingCatPage() {
       }
 
       setHasDog(true)
-      router.push('/uchinoko?welcome=1')
+      router.push(`/uchinoko/${docRef.id}?welcome=1`)
     } catch (e) {
       setError('保存に失敗しました。もう一度お試しください。')
       console.error(e)
