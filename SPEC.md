@@ -32,9 +32,27 @@
 
 ### 2.4 オンボーディング
 
-- 初回ログインでペット未登録の場合、オンボーディングに誘導（`OnboardingGuard`）
-- フロー: **プロフィール写真（任意）** → **ペット種別（犬/猫）** → **犬 or 猫の1頭目登録** → `/uchinoko/[dogId]?welcome=1` へ（詳細ページにシェア促進バナーを表示）
+- 初回ログインでペット未登録の場合、メイン画面にアクセスすると `OnboardingGuard` がオンボーディングへ誘導する
+- フロー: **プロフィール写真（任意）** → **ペット種別（犬/猫）** → **犬 or 猫の1頭目登録** → **ウチの子詳細** `/uchinoko/[dogId]?welcome=1` へ遷移し、シェア促進バナーを表示
 - Guard チェック: `owner?.photoUrl` なし → `/onboarding/profile`、`hasDog === false` → `/onboarding/pet-type`
+
+### 2.5 新規登録からの流れ
+
+| # | 画面・アクション | 説明 |
+|---|------------------|------|
+| 1 | **ランディング** `/` | 「はじめる（無料）」→ `/auth?mode=signup`。「ログインはこちら」→ `/auth`。ログイン済みは `/profile` へ。 |
+| 2 | **新規登録** `/auth` | お名前・メール・パスワード（6文字以上）。招待コード（任意）は `?ref=XXX` で事前入力可。登録成功で Firebase Auth と `owners/{uid}` 作成（`friendId` 付与）、招待コードあれば CF でポイント付与。 |
+| 3 | **リダイレクト** → `/uchinoko` | 登録直後に `/uchinoko` へ。`OnboardingGuard` が動作。 |
+| 4 | **オンボーディング** → `/onboarding/profile` | 飼い主に `photoUrl` が無いため `/onboarding/profile` へ。STEP 1/3。写真を設定 or スキップ → `/onboarding/pet-type`。 |
+| 5 | **ペット種別** `/onboarding/pet-type` | STEP 2/3。犬 or 猫を選択 → `/onboarding/dog` または `/onboarding/cat`。 |
+| 6 | **1頭目登録** `/onboarding/dog` または `/onboarding/cat` | 名前・誕生日・体重・性別・犬種（または猫の項目）・写真などを入力。犬の場合は性格診断・生活情報も。保存で `owners/{uid}/dogs/{dogId}` 作成、`setHasDog(true)` 後に **`/uchinoko/[dogId]?welcome=1`** へ（一覧ではなく**詳細ページ**へ）。 |
+| 7 | **ウチの子詳細 + ウェルカムバナー** `/uchinoko/[dogId]?welcome=1` | 登録した子の詳細ページが開く。**シェア促進バナー**が表示：「登録完了！ ○○のシェアカードを作って友達に教えよう」＋「シェアカードを作る」ボタン。タップで `ShareCardsModal` を開いてカード作成・共有。閉じる or バナーを消すと `?welcome=1` を外して通常表示へ。 |
+| 8 | **以降** | ウチの子一覧・詳細・ミッション・ランキング・おすすめ・マイページなど通常利用。 |
+
+**補足**
+
+- `/onboarding/welcome` は実装上すぐ `/uchinoko` にリダイレクトするため、通常フローでは経由しない。
+- 一覧ページ `/uchinoko?welcome=1` に直接アクセスした場合のみ、従来のウェルカムモーダル（「今日の一枚」ミッション投稿 → 投稿後はランキング説明 → ランキングを見る / ミッションをもっとやる）が表示される。通常のオンボーディング完了後は詳細ページに飛ぶため、このモーダルはメインフローでは使われない。
 
 ---
 
@@ -93,13 +111,15 @@
 
 ### 4.2 オンボーディング
 
+（Guard による誘導順）
+
 | パス | 説明 |
 |------|------|
-| `/onboarding/welcome` | ウェルカム（未使用時は `/uchinoko` にリダイレクト） |
-| `/onboarding/pet-type` | 犬 or 猫選択 |
-| `/onboarding/dog` | 犬の1頭目登録（名前・誕生日・体重・性別・犬種等＋写真） |
-| `/onboarding/cat` | 猫の1頭目登録 |
-| `/onboarding/profile` | 飼い主プロフィール写真（任意） |
+| `/onboarding/profile` | STEP 1/3。飼い主プロフィール写真（任意）。次へ or スキップ → pet-type |
+| `/onboarding/pet-type` | STEP 2/3。犬 or 猫選択 → dog または cat |
+| `/onboarding/dog` | 犬の1頭目登録（名前・誕生日・体重・性別・犬種等＋写真）。保存後 → `/uchinoko/[dogId]?welcome=1` |
+| `/onboarding/cat` | 猫の1頭目登録。保存後 → `/uchinoko/[dogId]?welcome=1` |
+| `/onboarding/welcome` | 未使用時は `/uchinoko` にリダイレクト。通常フローでは経由しない |
 
 ### 4.3 メイン（(main) レイアウト）
 
@@ -110,7 +130,7 @@
 | `/uchinoko` | ウチの子一覧。ペット追加・各子の詳細への入口。 |
 | `/uchinoko/new` | 犬の新規登録（基本情報＋性格診断＋生活情報→診断結果） |
 | `/uchinoko/new-cat` | 猫の新規登録 |
-| `/uchinoko/[dogId]` | ウチの子詳細（タブ: 基本情報 / ギャラリー）。編集・削除・共有・フレンド招待・日記一覧。`?welcome=1` でシェア促進バナーを表示 |
+| `/uchinoko/[dogId]` | ウチの子詳細（タブ: 詳細 / ギャラリー）。編集・削除・シェアカード・招待・日記一覧。`?welcome=1` でシェア促進バナーを表示 |
 | `/uchinoko/[dogId]/edit` | 犬の編集 |
 | `/uchinoko/[dogId]/diary/new` | 日記（写真＋コメント）新規投稿 |
 | `/uchinoko/[dogId]/diary/[diaryId]` | 日記詳細・削除 |
