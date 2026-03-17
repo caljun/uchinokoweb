@@ -164,18 +164,11 @@ function UchinokoDetailContent() {
           {/* 詳細タブ */}
           {tab === 'info' && (
             <div className="space-y-4">
-              {/* 編集 / シェアボタン */}
+              {/* 招待 / 編集ボタン */}
               <div className="flex justify-end gap-2">
                 <button
-                  onClick={() => setShowShareModal(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
-                >
-                  <Share2 size={14} />
-                  シェア
-                </button>
-                <button
                   onClick={handleInvite}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600 transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
                 >
                   <UserPlus size={14} />
                   招待
@@ -318,8 +311,17 @@ function UchinokoDetailContent() {
                 </div>
               </div>
 
+              {/* シェアボタン */}
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="w-full py-3.5 bg-orange-500 text-white rounded-2xl font-bold text-sm hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <Share2 size={16} />
+                シェアカードを作る
+              </button>
+
               {/* 削除 */}
-              <div className="mt-8 pt-6 border-t border-gray-100">
+              <div className="mt-4 pt-4 border-t border-gray-100">
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="w-full flex items-center justify-center gap-2 py-3 text-red-400 text-sm hover:text-red-500 transition-colors"

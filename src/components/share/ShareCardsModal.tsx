@@ -28,6 +28,7 @@ export function ShareCardsModal({ dog, onClose }: Props) {
   const [cardFiles, setCardFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(true)
   const [sharing, setSharing] = useState(false)
+  const [currentCard, setCurrentCard] = useState(0)
 
   const isCat = dog.petType === 'cat'
   const ageLabel = isCat ? getCatAgeDisplayText(dog.birthDate) : getAgeDisplayText(dog.birthDate, dog.breedSize)
@@ -136,14 +137,14 @@ export function ShareCardsModal({ dog, onClose }: Props) {
     generateCards()
   }, [photoReady, generateCards])
 
-  const handleShare = async () => {
-    if (cardFiles.length === 0) return
+  const shareFiles = async (files: File[]) => {
+    if (files.length === 0) return
     setSharing(true)
     try {
-      if (navigator.canShare && navigator.canShare({ files: cardFiles })) {
-        await navigator.share({ files: cardFiles, title: `${dog.name}のシェアカード` })
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files, title: `${dog.name}のシェアカード` })
       } else {
-        for (const file of cardFiles) {
+        for (const file of files) {
           const url = URL.createObjectURL(file)
           const a = document.createElement('a')
           a.download = file.name
@@ -158,6 +159,9 @@ export function ShareCardsModal({ dog, onClose }: Props) {
     }
   }
 
+  const handleShareCurrent = () => shareFiles([cardFiles[currentCard]])
+  const handleShareAll = () => shareFiles(cardFiles)
+
   const baseCard: React.CSSProperties = {
     width: CARD_W,
     height: CARD_H,
@@ -171,11 +175,14 @@ export function ShareCardsModal({ dog, onClose }: Props) {
 
   const cardCount = isCat ? 3 : 5
 
-  // 基本情報の行スタイル
-  const infoRow = (label: string, value: string) => (
-    <div key={label} style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', borderBottom: '1px solid #f3f4f6' }}>
-      <p style={{ fontSize: 22, color: '#9ca3af', margin: 0, fontWeight: 500, flexShrink: 0 }}>{label}</p>
-      <p style={{ fontSize: 22, fontWeight: 600, color: '#1f2937', margin: 0, flex: 1, textAlign: 'center' }}>{value}</p>
+  // 基本情報のタイルスタイル（スライドのSummaryTileに合わせる）
+  const infoTile = (icon: string, label: string, value: string) => (
+    <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '17px 18px', borderRadius: 13, border: '1px solid #f3f4f6', backgroundColor: 'rgba(249,250,251,0.8)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <span style={{ fontSize: 23 }}>{icon}</span>
+        <span style={{ fontSize: 21, color: '#9ca3af' }}>{label}</span>
+      </div>
+      <p style={{ fontSize: 22, fontWeight: 600, color: '#1f2937', margin: 0, textAlign: 'right', maxWidth: '60%', lineHeight: 1.3 }}>{value}</p>
     </div>
   )
 
@@ -198,37 +205,69 @@ export function ShareCardsModal({ dog, onClose }: Props) {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-14">
+          <div className="flex items-center justify-center py-16">
             <Loader2 size={32} className="animate-spin text-orange-400" />
           </div>
         ) : (
-          <div className="px-5 pb-4 flex gap-3 overflow-x-auto">
-            {cardUrls.map((url, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={i}
-                src={url}
-                alt={`カード${i + 1}`}
-                className="shrink-0 rounded-xl shadow-sm"
-                style={{ height: 160, width: 'auto' }}
-              />
-            ))}
-          </div>
-        )}
+          <>
+            {/* カードプレビュー */}
+            <div className="px-5 pb-3">
+              <div className="relative flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={cardUrls[currentCard]}
+                  alt={`カード${currentCard + 1}`}
+                  className="rounded-2xl shadow-md"
+                  style={{ height: 300, width: 'auto' }}
+                />
+                {currentCard > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentCard((p) => p - 1)}
+                    className="absolute left-0 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center text-gray-600 text-lg"
+                  >‹</button>
+                )}
+                {currentCard < cardUrls.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentCard((p) => p + 1)}
+                    className="absolute right-0 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center text-gray-600 text-lg"
+                  >›</button>
+                )}
+              </div>
+              {/* ドット */}
+              <div className="flex justify-center gap-1.5 mt-3">
+                {cardUrls.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setCurrentCard(i)}
+                    className={`w-2 h-2 rounded-full transition-colors ${i === currentCard ? 'bg-orange-500' : 'bg-gray-300'}`}
+                  />
+                ))}
+              </div>
+            </div>
 
-        <div className="px-5 pb-8">
-          <button
-            onClick={handleShare}
-            disabled={loading || sharing || cardFiles.length === 0}
-            className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors disabled:opacity-60"
-          >
-            {sharing ? (
-              <><Loader2 size={16} className="animate-spin" />シェア中...</>
-            ) : (
-              <><Share2 size={16} />{cardCount}枚まとめてシェア・保存</>
-            )}
-          </button>
-        </div>
+            {/* ボタン */}
+            <div className="px-5 pb-8 flex flex-col gap-2">
+              <button
+                onClick={handleShareCurrent}
+                disabled={sharing}
+                className="w-full py-3.5 bg-orange-500 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors disabled:opacity-60"
+              >
+                {sharing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
+                このカードをシェア
+              </button>
+              <button
+                onClick={handleShareAll}
+                disabled={sharing}
+                className="w-full py-2.5 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors disabled:opacity-40"
+              >
+                {cardCount}枚まとめて保存
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ───── オフスクリーンカード ───── */}
@@ -265,18 +304,18 @@ export function ShareCardsModal({ dog, onClose }: Props) {
             <p style={{ fontSize: 24, fontWeight: 700, color: '#f97316', margin: 0, letterSpacing: '0.02em' }}>ウチの子</p>
           </div>
 
-          <div style={{ backgroundColor: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
-            <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid #f3f4f6' }}>
-              <p style={{ fontSize: 13, color: '#9ca3af', margin: 0, fontWeight: 600, letterSpacing: '0.05em' }}>基本情報</p>
+          <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '22px 24px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+            <p style={{ fontSize: 20, color: '#9ca3af', margin: '0 0 16px', fontWeight: 600, letterSpacing: '0.05em' }}>基本情報</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {infoTile('🏷️', '名前', dog.name)}
+              {infoTile('📅', '年齢', ageLabel)}
+              {infoTile('⚥', '性別', genderFull)}
+              {infoTile('⚖️', '体重', `${dog.weight} kg`)}
+              {isCat
+                ? infoTile('🐱', '毛色・柄', dog.coatPattern ?? dog.breed)
+                : infoTile('🐶', '犬種', dog.breed)
+              }
             </div>
-            {infoRow('名前', dog.name)}
-            {infoRow('年齢', ageLabel)}
-            {infoRow('性別', genderFull)}
-            {infoRow('体重', `${dog.weight} kg`)}
-            {isCat
-              ? infoRow('毛色・柄', dog.coatPattern ?? dog.breed)
-              : infoRow('犬種', dog.breed)
-            }
           </div>
         </div>
 
@@ -288,41 +327,23 @@ export function ShareCardsModal({ dog, onClose }: Props) {
             </div>
 
             <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '20px 24px', marginBottom: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
-              <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 8px', fontWeight: 600, letterSpacing: '0.05em' }}>✦ 犬のタイプ</p>
-              <p style={{ fontSize: 28, fontWeight: 700, color: '#f97316', margin: '0 0 10px', lineHeight: 1.2 }}>{dog.temperamentType}</p>
-              <p style={{ fontSize: 20, color: '#6b7280', lineHeight: 1.8, margin: 0 }}>
-                {typeDesc.split('\n').join('　')}
-              </p>
+              <p style={{ fontSize: 18, color: '#9ca3af', margin: '0 0 6px' }}>性格タイプ</p>
+              <p style={{ fontSize: 24, fontWeight: 600, color: '#1f2937', margin: '0 0 10px' }}>{dog.temperamentType}</p>
+              {typeDesc && (
+                <p style={{ fontSize: 19, color: '#6b7280', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-line' }}>{typeDesc}</p>
+              )}
             </div>
 
-            {(breedInfo.purpose || breedInfo.pros) && (
+            {(breedInfo.origin || breedInfo.purpose || breedInfo.pros || breedInfo.cons || breedInfo.chip) && (
               <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '16px 20px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
-                <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 10px', fontWeight: 600, letterSpacing: '0.05em' }}>🐶 犬種の特徴</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {breedInfo.origin && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <p style={{ fontSize: 20, color: '#9ca3af', margin: 0, minWidth: 44, fontWeight: 500 }}>原産国</p>
-                      <p style={{ fontSize: 20, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.origin}</p>
-                    </div>
-                  )}
-                  {breedInfo.purpose && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <p style={{ fontSize: 20, color: '#9ca3af', margin: 0, minWidth: 44, fontWeight: 500 }}>目的</p>
-                      <p style={{ fontSize: 20, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.purpose}</p>
-                    </div>
-                  )}
-                  {breedInfo.pros && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <p style={{ fontSize: 20, color: '#22c55e', margin: 0, minWidth: 44, fontWeight: 600 }}>長所</p>
-                      <p style={{ fontSize: 20, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.pros}</p>
-                    </div>
-                  )}
-                  {breedInfo.cons && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <p style={{ fontSize: 20, color: '#f87171', margin: 0, minWidth: 44, fontWeight: 600 }}>短所</p>
-                      <p style={{ fontSize: 20, color: '#374151', margin: 0, lineHeight: 1.5 }}>{breedInfo.cons}</p>
-                    </div>
-                  )}
+                <p style={{ fontSize: 18, color: '#9ca3af', margin: '0 0 12px', fontWeight: 600, letterSpacing: '0.05em' }}>犬種の特徴</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <p style={{ fontSize: 20, fontWeight: 600, color: '#374151', margin: '0 0 4px' }}>【{dog.breed}の特徴】</p>
+                  {breedInfo.origin && <p style={{ fontSize: 18, color: '#6b7280', margin: 0 }}>原産国: {breedInfo.origin}</p>}
+                  {breedInfo.purpose && <p style={{ fontSize: 18, color: '#6b7280', margin: 0 }}>目的: {breedInfo.purpose}</p>}
+                  {breedInfo.pros && <p style={{ fontSize: 18, color: '#6b7280', margin: 0 }}>長所: {breedInfo.pros}</p>}
+                  {breedInfo.cons && <p style={{ fontSize: 18, color: '#6b7280', margin: 0 }}>短所: {breedInfo.cons}</p>}
+                  {breedInfo.chip && <p style={{ fontSize: 18, color: '#6b7280', margin: '6px 0 0', whiteSpace: 'pre-line' }}>{breedInfo.chip}</p>}
                 </div>
               </div>
             )}
@@ -337,10 +358,10 @@ export function ShareCardsModal({ dog, onClose }: Props) {
             </div>
 
             <div style={{ backgroundColor: 'white', borderRadius: 20, padding: '20px 24px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
-              <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 12px', fontWeight: 600, letterSpacing: '0.05em' }}>✦ 詳細説明</p>
+              <p style={{ fontSize: 18, color: '#9ca3af', margin: '0 0 16px', fontWeight: 600, letterSpacing: '0.05em' }}>詳細説明</p>
               <div>
                 {diffParagraphs.slice(0, 4).map((p, i) => (
-                  <p key={i} style={{ fontSize: 20, color: '#374151', lineHeight: 1.8, margin: i > 0 ? '10px 0 0' : '0' }}>
+                  <p key={i} style={{ fontSize: 20, color: '#6b7280', lineHeight: 1.8, margin: i > 0 ? '12px 0 0' : '0' }}>
                     {p.replace(/\n/g, '')}
                   </p>
                 ))}
