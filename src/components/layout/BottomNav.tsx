@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Target, Trophy, Home, User } from 'lucide-react'
+import { BookOpen, Home, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function BottomNav() {
@@ -19,7 +19,7 @@ export default function BottomNav() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      {/* マイページ（先頭） */}
+      {/* マイページ */}
       <Link
         href="/profile"
         className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
@@ -36,26 +36,27 @@ export default function BottomNav() {
         <span className="text-xs font-medium">マイページ</span>
       </Link>
 
-      {/* ミッション / ランキング / おすすめ */}
-      {[
-        { href: '/missions', label: 'ミッション', Icon: Target },
-        { href: '/ranking', label: 'ランキング', Icon: Trophy },
-        { href: '/home', label: 'おすすめ', Icon: Home },
-      ].map(({ href, label, Icon }) => {
-        const active = pathname.startsWith(href)
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
-              active ? 'text-orange-500' : 'text-gray-400'
-            }`}
-          >
-            <Icon size={24} />
-            <span className="text-xs font-medium">{label}</span>
-          </Link>
-        )
-      })}
+      {/* トレーニング */}
+      <Link
+        href="/training"
+        className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
+          pathname.startsWith('/training') ? 'text-orange-500' : 'text-gray-400'
+        }`}
+      >
+        <BookOpen size={24} />
+        <span className="text-xs font-medium">トレーニング</span>
+      </Link>
+
+      {/* おすすめ */}
+      <Link
+        href="/home"
+        className={`flex-1 flex flex-col items-center gap-1 pb-2 transition-colors ${
+          pathname.startsWith('/home') ? 'text-orange-500' : 'text-gray-400'
+        }`}
+      >
+        <Home size={24} />
+        <span className="text-xs font-medium">おすすめ</span>
+      </Link>
     </nav>
   )
 }

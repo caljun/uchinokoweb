@@ -195,13 +195,6 @@ function UchinokoContent() {
                 <span className="text-4xl">🐶</span>
                 <span className="font-bold text-gray-800">犬</span>
               </button>
-              <button
-                onClick={() => { setShowPetModal(false); router.push('/uchinoko/new-cat') }}
-                className="flex-1 flex flex-col items-center gap-2 py-6 bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors"
-              >
-                <span className="text-4xl">🐱</span>
-                <span className="font-bold text-gray-800">猫</span>
-              </button>
             </div>
           </div>
         </div>
