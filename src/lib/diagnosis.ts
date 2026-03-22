@@ -78,83 +78,6 @@ export function getBreedSize(breed: string): number {
   return 0
 }
 
-// ===== 性格タイプ判定 =====
-// x: 物覚え (-1=悪い, 0=普通, 1=良い)
-// y: テンション (-1=怖がり, 0=普通, 1=ハイテンション)
-// 戻り値: "リーダータイプ" | "右腕タイプ" | "市民タイプ" | "守られタイプ"
-export function calculateTemperamentType(x: number, y: number): string {
-  if (y > 0) return '市民タイプ'
-
-  if (y === 0) {
-    if (x >= 1) return 'リーダータイプ'
-    if (x === 0) return '右腕タイプ'
-    return '市民タイプ'
-  }
-
-  // y < 0 (怖がり)
-  if (x >= 1) return '市民タイプ'
-  return '守られタイプ'
-}
-
-export function getTemperamentDescription(type: string): string {
-  const descriptions: Record<string, string> = {
-    'リーダータイプ': '知恵があり勇敢なまとめ役タイプです。\n犬社会と人間社会での自分の役割を理解しており、人の役に立ちたいと思っています。\n仕事を与えて達成感を味わわせてあげましょう。',
-    '右腕タイプ': '活発で楽観的、好奇心旺盛なタイプです。\n目立つ失敗をすることもありますが、リーダータイプの犬や人のもとで能力が向上します。\n運動と刺激をしっかり与えてあげましょう。',
-    '市民タイプ': '遊びを通して序列確認をし合って過ごすタイプです。\n遊びがヒートアップしてケンカになりやすいですが、社交性があり比較的飼いやすいです。\n適度な遊び相手を見つけてあげましょう。',
-    '守られタイプ': '特定の人になつきやすく、その他の人には人見知りをするタイプです。\nいつも抱っこされていたいと思っています。\n環境の変化は苦手なので、社会化を意識して取り組みましょう。',
-  }
-  return descriptions[type] ?? ''
-}
-
-// ===== しつけ難易度ランク =====
-export function calculateDifficultyRank(params: {
-  multiDog: boolean
-  toyLover: boolean
-  sleepTogether: boolean
-  restrictedRoom: boolean
-  leadType: string
-}): string {
-  let score = 0
-  if (!params.multiDog) score++
-  if (!params.toyLover) score++
-  if (params.sleepTogether) score++
-  if (!params.restrictedRoom) score++
-  if (params.leadType === 'harness') score++
-
-  if (score === 0) return 'A'
-  if (score <= 2) return 'B'
-  return 'C'
-}
-
-export function getAgeDescription(ageGroup: number): string {
-  const desc: Record<number, string> = {
-    0: '年齢的に、のちにトラウマにならないようなトレーニングを推奨します。\nご褒美を使ってポジティブな記憶を作りましょう。\n好奇心が強いので誤飲誤食しない環境を整えることが大切です。',
-    1: '年齢的に、ストレス管理が大切な時期です。\n散歩だけでなく知育玩具などを使った「脳の運動」も取り入れましょう。\nシニア期に内臓の病気にならないようにデンタルケアを習慣化しておくことをおすすめします。',
-    2: '年齢的に、小さな変化を見逃さない守りの時期です。\n体温調節機能が低下するため、夏場の熱中症や冬場のヒートショックには特に注意が必要です。\nまた環境変化も強いストレスになるので要注意です。',
-  }
-  return desc[ageGroup] ?? ''
-}
-
-export function getBreedSizeDescription(breedSize: number): string {
-  const desc: Record<number, string> = {
-    0: '小型犬は力が弱く怪我をしやすいので、怖がりな子が多いです。\n日頃から優しく落ち着いた接し方を心がけましょう。\n過保護になりやすいので注意しましょう。',
-    1: '中型犬はもともと「牧羊犬」や「猟犬」として活躍していた犬種が多く、スタミナがあります。\nまずは運動でエネルギーを発散させてあげましょう。\n犬種特性に合わせたアプローチを心がけましょう。',
-    2: '大型犬は力が強いので、日頃から思考力を養う遊びやトレーニングを取り入れましょう。\n犬自身が考えて適切な行動がとれるよう育てていきましょう。',
-  }
-  return desc[breedSize] ?? ''
-}
-
-export function getDifficultyDescription(rank: string, ageGroup: number, breedSize: number): string {
-  const rankDesc: Record<string, string> = {
-    A: '運動不足やタスク不足による欲求不満に陥ると、問題行動が現れやすくなります。\nトレーニングやアジリティーなど、有意義な時間を作ってあげましょう。',
-    B: '活発なので、運動不足や刺激不足で問題行動を起こしやすいです。\n社会化不足や過保護に起因した問題行動も出やすいですが、飲み込みが早いので適切なサポートがあれば比較的早く改善します。',
-    C: 'アンバランスな生活環境では、人や犬との社会性が低下しやすくなります。\nすれ違う人や犬に吠えるなどの問題行動が出やすいので、専門家の指示のもと段階的なトレーニングを行いましょう。',
-  }
-  return [getBreedSizeDescription(breedSize), rankDesc[rank] ?? '', getAgeDescription(ageGroup)]
-    .filter(Boolean)
-    .join('\n\n')
-}
-
 export function getBreedDescription(breed: string): BreedInfo {
   const data: Record<string, BreedInfo> = {
     'イタリアン・グレーハウンド': { origin: 'イタリア', purpose: '小型サイトハウンド / コンパニオン', pros: '優雅 / 穏やか', cons: '寒がり / 繊細', chip: '細身で優雅な走り。穏やかで人懐っこい。寒さに弱いので冬は服を。膝蓋骨脱臼に注意し、滑りやすい床はマットで対策を。' },
@@ -263,28 +186,6 @@ export const ALL_BREEDS = [
 export function getMixBreedSize(breed1: string, breed2: string): number {
   return Math.max(getBreedSize(breed1), getBreedSize(breed2))
 }
-
-// ===== X軸・Y軸の選択肢 =====
-export const X_OPTIONS = [
-  { value: -1, label: '物覚えが悪い' },
-  { value: 0, label: '普通' },
-  { value: 1, label: '物覚えが良い' },
-]
-
-export const Y_OPTIONS = [
-  { value: -1, label: '怖がり・控えめ' },
-  { value: 0, label: '普通' },
-  { value: 1, label: 'ハイテンション' },
-]
-
-export const WALK_FREQUENCY_OPTIONS = [
-  '毎日1回', '毎日2回以上', '週4〜6回', '週2〜3回', '週1回以下',
-]
-
-export const DOG_FOOD_OPTIONS = [
-  'ロイヤルカナン', 'ヒルズ', 'ピュリナ', 'アカナ', 'オリジン',
-  'ニュートロ', 'サイエンスダイエット', 'その他',
-]
 
 // ===== 年齢表示ヘルパー（iOS AgeDisplayHelper.swift 準拠） =====
 

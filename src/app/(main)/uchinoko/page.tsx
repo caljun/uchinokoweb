@@ -23,7 +23,7 @@ export default function UchinokoPage() {
 }
 
 function UchinokoContent() {
-  const { user, addMissionPoints } = useAuth()
+  const { user } = useAuth()
   const { openAuthModal } = useAuthModal()
   const [dogs, setDogs] = useState<Dog[]>([])
   const [loading, setLoading] = useState(true)
@@ -63,7 +63,6 @@ function UchinokoContent() {
       const storageRef = ref(storage, `owners/${user.uid}/dogs/${welcomeDogId}/missionPhotos/${today}_photo_post.jpg`)
       await uploadBytes(storageRef, file)
       const photoUrl = await getDownloadURL(storageRef)
-      await addMissionPoints(welcomeDogId, 'photo_post', 10)
       await setDoc(doc(collection(db, 'owners', user.uid, 'dogs', welcomeDogId, 'diaries')), {
         photos: [photoUrl],
         comment: 'ミッション達成！「今日の一枚」',
@@ -87,7 +86,7 @@ function UchinokoContent() {
     const catLabels = ['子猫期', '成猫期', 'シニア期']
     const dogLabels = ['パピー期', '成犬期', 'シニア期']
     const labels = pet.petType === 'cat' ? catLabels : dogLabels
-    return labels[pet.ageGroup] ?? labels[1]
+    return labels[pet.ageGroup ?? 1] ?? labels[1]
   }
 
   if (!user) {

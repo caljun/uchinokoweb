@@ -1,65 +1,54 @@
+import type { BreedGroup, SexType, MentorAgeGroup, MentorStatus } from '@/lib/mentorDiagnosis'
+
 export interface Dog {
   id?: string
-  petType?: 'dog' | 'cat'  // 未設定は犬とみなす
+  petType?: 'dog' | 'cat'
   name: string
   birthDate: Date
-  ageGroup: number       // 0=パピー期/子猫期, 1=成犬期/成猫期, 2=シニア期
+  ageGroup?: number      // 旧フィールド（後方互換）
   weight: number
   gender: string         // "male" | "female"
   neutered?: boolean
   breed: string
-  mixBreed1?: string     // ミックス時の1つ目の犬種
-  mixBreed2?: string     // ミックス時の2つ目の犬種
-  breedSize: number      // 0=小型, 1=中型, 2=大型（猫は常に0）
-  coatPattern?: string   // 猫の毛色・柄
+  mixBreed1?: string
+  mixBreed2?: string
+  breedSize: number      // 0=小型, 1=中型, 2=大型
+  coatPattern?: string   // 猫の毛色・柄（旧フィールド）
 
-  // 社会化マップ
-  x: number              // -1=悪い, 0=普通, 1=良い（物覚え）
-  y: number              // -1=怖がり, 0=普通, 1=ハイテンション（テンション）
-  multiDog: boolean
-  toyLover: boolean
-  sleepTogether: boolean
-  restrictedRoom: boolean
-  leadType: string       // "lead" | "harness"
+  // メンター診断結果
+  breedGroup?: BreedGroup         // "strong" | "normal" | "calm"
+  sex?: SexType                   // "male_intact" | "male_neutered" | "female_intact" | "female_spayed"
+  mentorAgeGroup?: MentorAgeGroup // "puppy" | "adult" | "middle" | "senior"
+  powerScore?: number             // パワー値
+  mentorStatus?: MentorStatus     // "overheat" | "high_energy" | "standard" | "therapy"
+  diagnosisAnswers?: number[]     // 6問の回答 [1〜3] × 6
 
-  // 生活情報
-  dogFood?: string
-  dogFoodImageUrl?: string
-  walkFrequency?: string
-  activeSeason?: string  // "summer" | "winter"
-  hospitalHistory: boolean
-  allergy: boolean
-
-  // 診断結果
-  temperamentType: string  // "リーダータイプ"|"右腕タイプ"|"市民タイプ"|"守られタイプ"
-  difficultyRank: string   // "A"|"B"|"C"
-  difficultyDescription: string
+  // 旧診断フィールド（後方互換・既存ドキュメントに残っている場合がある）
+  temperamentType?: string
+  difficultyRank?: string
+  difficultyDescription?: string
 
   photoUrl?: string
   isPublic: boolean
   createdAt: Date
 
-  // ゲーム関連（ランキング用）
   ownerId?: string
-  totalPoints?: number
-  weeklyPoints?: number
-  weeklyPointsWeekStr?: string
 }
 
 export interface DiaryCreatedBy {
   type: 'owner' | 'shop'
-  id: string             // shopId or ownerId
-  name: string           // 店舗名 or 飼い主名
+  id: string
+  name: string
 }
 
 export interface Diary {
   id?: string
   dogId: string
   ownerId: string
-  photos: string[]       // 最大3枚
+  photos: string[]
   comment: string
   createdAt: Date
-  createdBy?: DiaryCreatedBy  // 未設定の場合は飼い主の投稿とみなす
+  createdBy?: DiaryCreatedBy
 }
 
 export interface HealthRecord {
@@ -68,8 +57,30 @@ export interface HealthRecord {
   ownerId: string
   recordDate: Date
   weight?: number
-  condition?: string     // "元気"|"普通"|"ちょっと心配"|"しんどい"
-  appetite?: string      // "よく食べた"|"普通"|"あまり食べなかった"
+  condition?: string
+  appetite?: string
   note?: string
   createdAt: Date
+}
+
+export interface Checkin {
+  id?: string
+  dogId: string
+  date: Date
+  alertLevel: number       // 警戒レベル 0-10
+  frustrationLevel: number // 不満レベル 0-10
+  exhaustionLevel: number  // 疲弊レベル 0-10
+  totalChaos: number
+  chaosColor: 'red' | 'yellow' | 'blue'
+  createdAt: Date
+}
+
+export interface MentorProgress {
+  dogId: string
+  currentChapter: number          // 1-5
+  mentorTitle: string             // 称号
+  chaosReduced: number            // 累計削減量（称号判定用）
+  totalChaosHistory: { date: string; total: number }[]  // グラフ用
+  completedMissions: string[]     // missionId[]
+  updatedAt: Date
 }

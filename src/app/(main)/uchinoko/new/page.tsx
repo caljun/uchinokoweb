@@ -2,34 +2,33 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { collection, addDoc, serverTimestamp, doc, runTransaction, increment } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import {
-  calculateAgeGroup,
   getBreedSize,
   getMixBreedSize,
-  calculateTemperamentType,
-  calculateDifficultyRank,
-  getDifficultyDescription,
-  getTemperamentDescription,
-  getBreedDescription,
   PURE_BREEDS,
   MIX_BREEDS,
-  X_OPTIONS,
-  Y_OPTIONS,
-  WALK_FREQUENCY_OPTIONS,
 } from '@/lib/diagnosis'
+import {
+  getBreedGroup,
+  getSexType,
+  getMentorAgeGroup,
+  calcPowerScore,
+  getMentorStatus,
+  DIAGNOSIS_QUESTIONS,
+} from '@/lib/mentorDiagnosis'
 
 type Step = 0 | 1 | 2
 
 interface FormData {
-  // Step1: 基本情報
+  // Step0: 基本情報
   name: string
   birthDate: string
   weight: string
-  gender: string        // "male" | "female"
+  gender: string       // "male" | "female"
   neutered: boolean
   breed: string
   mixBreed1: string
@@ -37,18 +36,8 @@ interface FormData {
   photo: File | null
   photoPreview: string | null
 
-  // Step2: 性格診断
-  x: number             // -1 | 0 | 1
-  y: number             // -1 | 0 | 1
-  multiDog: boolean
-  toyLover: boolean
-  sleepTogether: boolean
-  restrictedRoom: boolean
-  leadType: string      // "lead" | "harness"
-  walkFrequency: string
-  activeSeason: string  // "" | "summer" | "winter"
-  hospitalHistory: boolean
-  allergy: boolean
+  // Step1: 6つの環境質問（1〜3）
+  answers: number[]
 }
 
 const initialForm: FormData = {
@@ -62,17 +51,7 @@ const initialForm: FormData = {
   mixBreed2: '',
   photo: null,
   photoPreview: null,
-  x: 0,
-  y: 0,
-  multiDog: false,
-  toyLover: true,
-  sleepTogether: false,
-  restrictedRoom: false,
-  leadType: 'lead',
-  walkFrequency: '毎日1回',
-  activeSeason: '',
-  hospitalHistory: false,
-  allergy: false,
+  answers: [0, 0, 0, 0, 0, 0],
 }
 
 export default function UchinokoNewPage() {
@@ -81,11 +60,18 @@ export default function UchinokoNewPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { user, owner, reloadOwner } = useAuth()
+  const { user, setHasDog } = useAuth()
   const router = useRouter()
 
   const set = (key: keyof FormData, value: unknown) =>
     setForm((prev) => ({ ...prev, [key]: value }))
+
+  const setAnswer = (index: number, value: number) =>
+    setForm((prev) => {
+      const next = [...prev.answers]
+      next[index] = value
+      return { ...prev, answers: next }
+    })
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -97,16 +83,16 @@ export default function UchinokoNewPage() {
   const breedSize = form.breed.startsWith('ミックス') && form.mixBreed1 && form.mixBreed2
     ? getMixBreedSize(form.mixBreed1, form.mixBreed2)
     : getBreedSize(form.breed)
-  const ageGroup = form.birthDate ? calculateAgeGroup(new Date(form.birthDate), breedSize) : 1
-  const temperamentType = calculateTemperamentType(form.x, form.y)
-  const difficultyRank = calculateDifficultyRank({
-    multiDog: form.multiDog,
-    toyLover: form.toyLover,
-    sleepTogether: form.sleepTogether,
-    restrictedRoom: form.restrictedRoom,
-    leadType: form.leadType,
-  })
-  const difficultyDescription = getDifficultyDescription(difficultyRank, ageGroup, breedSize)
+
+  const breedGroup = getBreedGroup(form.breed)
+  const sexType = getSexType(form.gender, form.neutered)
+  const mentorAgeGroup = form.birthDate ? getMentorAgeGroup(new Date(form.birthDate)) : 'adult'
+  const powerScore = form.answers.every((a) => a > 0)
+    ? calcPowerScore(breedGroup, sexType, mentorAgeGroup, form.answers)
+    : null
+  const mentorStatus = powerScore !== null ? getMentorStatus(powerScore) : null
+
+  const allAnswered = form.answers.every((a) => a > 0)
 
   const handleSave = async () => {
     if (!user) return
@@ -116,32 +102,22 @@ export default function UchinokoNewPage() {
       const docRef = await addDoc(collection(db, 'owners', user.uid, 'dogs'), {
         name: form.name,
         birthDate: new Date(form.birthDate),
-        ageGroup,
         weight: parseFloat(form.weight) || 0,
         gender: form.gender,
         neutered: form.neutered,
         breed: form.breed,
         ...(form.breed.startsWith('ミックス') && { mixBreed1: form.mixBreed1 || null, mixBreed2: form.mixBreed2 || null }),
         breedSize,
-        x: form.x,
-        y: form.y,
-        multiDog: form.multiDog,
-        toyLover: form.toyLover,
-        sleepTogether: form.sleepTogether,
-        restrictedRoom: form.restrictedRoom,
-        leadType: form.leadType,
-        walkFrequency: form.walkFrequency || null,
-        activeSeason: form.activeSeason || null,
-        hospitalHistory: form.hospitalHistory,
-        allergy: form.allergy,
-        temperamentType,
-        difficultyRank,
-        difficultyDescription,
+        breedGroup,
+        sex: sexType,
+        mentorAgeGroup,
+        powerScore,
+        mentorStatus,
+        diagnosisAnswers: form.answers,
         isPublic: false,
         createdAt: serverTimestamp(),
       })
 
-      // 写真アップロード
       if (form.photo) {
         const storageRef = ref(storage, `owners/${user.uid}/dogs/${docRef.id}/profile.jpg`)
         await uploadBytes(storageRef, form.photo)
@@ -150,23 +126,7 @@ export default function UchinokoNewPage() {
         await updateDoc(docFn(db, 'owners', user.uid, 'dogs', docRef.id), { photoUrl })
       }
 
-      // 招待ボーナスのpendingPointsがあればこの犬に付与
-      if (owner?.pendingPoints && owner.pendingPoints > 0) {
-        await runTransaction(db, async (tx) => {
-          const ownerRef = doc(db, 'owners', user.uid)
-          const ownerSnap = await tx.get(ownerRef)
-          const pending = (ownerSnap.data()?.pendingPoints as number) ?? 0
-          if (pending > 0) {
-            tx.update(doc(db, 'owners', user.uid, 'dogs', docRef.id), {
-              totalPoints: increment(pending),
-              weeklyPoints: increment(pending),
-            })
-            tx.update(ownerRef, { pendingPoints: 0 })
-          }
-        })
-        await reloadOwner()
-      }
-
+      setHasDog(true)
       router.push(`/uchinoko/${docRef.id}`)
     } catch (e) {
       setError('保存に失敗しました。もう一度お試しください。')
@@ -190,13 +150,9 @@ export default function UchinokoNewPage() {
               <p className="text-xs text-gray-400">ステップ {step + 1} / 3</p>
             </div>
           </div>
-          {/* プログレスバー */}
           <div className="mt-3 flex gap-1.5">
             {[0, 1, 2].map((s) => (
-              <div
-                key={s}
-                className={`h-1 flex-1 rounded-full transition-colors ${s <= step ? 'bg-orange-400' : 'bg-gray-200'}`}
-              />
+              <div key={s} className={`h-1 flex-1 rounded-full transition-colors ${s <= step ? 'bg-orange-400' : 'bg-gray-200'}`} />
             ))}
           </div>
         </div>
@@ -224,7 +180,6 @@ export default function UchinokoNewPage() {
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
               </div>
 
-              {/* 名前 */}
               <Field label="名前 *">
                 <input
                   type="text"
@@ -235,7 +190,6 @@ export default function UchinokoNewPage() {
                 />
               </Field>
 
-              {/* 生年月日 */}
               <Field label="生年月日 *">
                 <input
                   type="date"
@@ -246,8 +200,7 @@ export default function UchinokoNewPage() {
                 />
               </Field>
 
-              {/* 体重 */}
-              <Field label="体重 (kg) *">
+              <Field label="体重 (kg)">
                 <input
                   type="number"
                   value={form.weight}
@@ -259,7 +212,6 @@ export default function UchinokoNewPage() {
                 />
               </Field>
 
-              {/* 性別 */}
               <Field label="性別 *">
                 <div className="flex gap-3">
                   {(['male', 'female'] as const).map((g) => (
@@ -278,7 +230,6 @@ export default function UchinokoNewPage() {
                 </div>
               </Field>
 
-              {/* 去勢・避妊 */}
               <Field label="去勢・避妊">
                 <div className="flex gap-3">
                   {([true, false] as const).map((v) => (
@@ -297,7 +248,6 @@ export default function UchinokoNewPage() {
                 </div>
               </Field>
 
-              {/* 犬種 */}
               <Field label="犬種 *">
                 <select
                   value={form.breed}
@@ -322,22 +272,14 @@ export default function UchinokoNewPage() {
                   <div className="mt-3 space-y-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">ミックス 1つ目</p>
-                      <select
-                        value={form.mixBreed1}
-                        onChange={(e) => set('mixBreed1', e.target.value)}
-                        className={INPUT}
-                      >
+                      <select value={form.mixBreed1} onChange={(e) => set('mixBreed1', e.target.value)} className={INPUT}>
                         <option value="">犬種を選択</option>
                         {PURE_BREEDS.map((b) => <option key={b} value={b}>{b}</option>)}
                       </select>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">ミックス 2つ目</p>
-                      <select
-                        value={form.mixBreed2}
-                        onChange={(e) => set('mixBreed2', e.target.value)}
-                        className={INPUT}
-                      >
+                      <select value={form.mixBreed2} onChange={(e) => set('mixBreed2', e.target.value)} className={INPUT}>
                         <option value="">犬種を選択</option>
                         {PURE_BREEDS.map((b) => <option key={b} value={b}>{b}</option>)}
                       </select>
@@ -348,8 +290,8 @@ export default function UchinokoNewPage() {
 
               <button
                 onClick={() => {
-                  if (!form.name || !form.birthDate || !form.weight) {
-                    setError('名前・生年月日・体重は必須です')
+                  if (!form.name || !form.birthDate) {
+                    setError('名前と生年月日は必須です')
                     return
                   }
                   setError('')
@@ -363,133 +305,87 @@ export default function UchinokoNewPage() {
             </div>
           )}
 
-          {/* Step 1: 性格診断 */}
+          {/* Step 1: 6つの環境質問 */}
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-lg font-bold text-gray-800">性格と行動を教えてください</h2>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">環境チェック</h2>
+                <p className="text-sm text-gray-500 mt-1">正直に答えるほど、正確なパワー値が出ます</p>
+              </div>
 
-              {/* 物覚え (X軸) */}
-              <Card label="物覚えはどうですか？">
-                <div className="flex flex-col gap-2">
-                  {X_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => set('x', opt.value)}
-                      className={`py-3 px-4 rounded-xl border-2 text-sm font-medium text-left transition-all ${
-                        form.x === opt.value
-                          ? 'border-orange-400 bg-orange-50 text-orange-600'
-                          : 'border-gray-200 bg-white text-gray-600'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </Card>
-
-              {/* テンション (Y軸) */}
-              <Card label="テンションはどうですか？">
-                <div className="flex flex-col gap-2">
-                  {Y_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => set('y', opt.value)}
-                      className={`py-3 px-4 rounded-xl border-2 text-sm font-medium text-left transition-all ${
-                        form.y === opt.value
-                          ? 'border-orange-400 bg-orange-50 text-orange-600'
-                          : 'border-gray-200 bg-white text-gray-600'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </Card>
-
-              {/* ToggleItems */}
-              <Card label="生活スタイル">
-                <div className="space-y-3">
-                  <Toggle label="多頭飼いですか？" value={form.multiDog} onChange={(v) => set('multiDog', v)} />
-                  <Toggle label="おもちゃで遊びますか？" value={form.toyLover} onChange={(v) => set('toyLover', v)} />
-                  <Toggle label="一緒に寝ていますか？" value={form.sleepTogether} onChange={(v) => set('sleepTogether', v)} />
-                  <Toggle label="入れない部屋がありますか？" value={form.restrictedRoom} onChange={(v) => set('restrictedRoom', v)} />
-                </div>
-              </Card>
-
-              {/* リード/ハーネス */}
-              <Card label="お散歩スタイル">
-                <div className="flex gap-3">
-                  {(['lead', 'harness'] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => set('leadType', t)}
-                      className={`flex-1 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
-                        form.leadType === t
-                          ? 'border-orange-400 bg-orange-50 text-orange-600'
-                          : 'border-gray-200 bg-white text-gray-500'
-                      }`}
-                    >
-                      {t === 'lead' ? '🐕 リード派' : '🦺 ハーネス派'}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-3">
-                  <label className="text-sm font-medium text-gray-600 mb-1 block">散歩頻度</label>
-                  <select
-                    value={form.walkFrequency}
-                    onChange={(e) => set('walkFrequency', e.target.value)}
-                    className={INPUT}
-                  >
-                    {WALK_FREQUENCY_OPTIONS.map((o) => (
-                      <option key={o} value={o}>{o}</option>
+              {DIAGNOSIS_QUESTIONS.map((q, idx) => (
+                <div key={q.id} className="bg-white rounded-2xl p-4 border border-gray-100">
+                  <p className="text-sm font-bold text-gray-700 mb-3">Q{q.id}. {q.question}</p>
+                  <div className="flex flex-col gap-2">
+                    {q.options.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setAnswer(idx, opt.value)}
+                        className={`py-3 px-4 rounded-xl border-2 text-sm font-medium text-left transition-all ${
+                          form.answers[idx] === opt.value
+                            ? 'border-orange-400 bg-orange-50 text-orange-700'
+                            : 'border-gray-200 bg-white text-gray-600'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
-              </Card>
+              ))}
 
               <button
-                onClick={() => setStep(2)}
+                onClick={() => {
+                  if (!allAnswered) {
+                    setError('すべての質問に答えてください')
+                    return
+                  }
+                  setError('')
+                  setStep(2)
+                }}
                 className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-base hover:bg-orange-600 transition-colors"
               >
                 診断結果を見る →
               </button>
+              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
             </div>
           )}
 
           {/* Step 2: 診断結果 */}
-          {step === 2 && (
+          {step === 2 && powerScore !== null && mentorStatus !== null && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">診断結果</h2>
+              <h2 className="text-xl font-bold text-gray-800">診断結果</h2>
 
-              <div className="space-y-3">
-                <p className="text-base font-semibold text-gray-900">タイプ</p>
-                <p className="text-sm text-gray-500">{temperamentType}</p>
-                <p className="text-sm text-gray-500 leading-relaxed mt-1 whitespace-pre-line">
-                  {getTemperamentDescription(temperamentType)}
+              {/* パワー値カード */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center">
+                <p className="text-sm text-gray-500 mb-1">パワー値</p>
+                <p className="text-6xl font-black text-orange-500 mb-2">{powerScore}</p>
+                <div className="inline-flex items-center gap-2 bg-orange-50 rounded-full px-4 py-1.5">
+                  <span className="text-lg">
+                    {mentorStatus === 'overheat' ? '🔴' :
+                     mentorStatus === 'high_energy' ? '🟠' :
+                     mentorStatus === 'standard' ? '🟡' : '🟢'}
+                  </span>
+                  <span className="font-bold text-orange-700">
+                    {mentorStatus === 'overheat' ? 'オーバーヒート' :
+                     mentorStatus === 'high_energy' ? 'ハイ・エナジー' :
+                     mentorStatus === 'standard' ? 'スタンダード' : 'セラピー候補'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {mentorStatus === 'overheat' && '環境による異常値。休息と環境改善が最優先です。まずは第1章「脳の冷却」から始めましょう。'}
+                  {mentorStatus === 'high_energy' && 'パワフルな個性。適切な「仕事」を与えることが鍵です。ミッションで一緒に取り組みましょう。'}
+                  {mentorStatus === 'standard' && '安定圏内。メンターの導きで名犬になれます。ミッションを続けてスコアを下げていきましょう。'}
+                  {mentorStatus === 'therapy' && '究極の安定。周囲を癒やす素質があります。この状態を維持しながら才能を伸ばしましょう。'}
                 </p>
               </div>
 
-              <hr className="border-gray-200" />
-
-              <div className="space-y-3">
-                <p className="text-base font-semibold text-gray-900">詳細説明</p>
-                {(() => {
-                  const breed = getBreedDescription(form.breed)
-                  if (breed.purpose) return (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-gray-700">【{form.breed}の特徴】</p>
-                      {breed.origin && <p className="text-sm text-gray-500">原産国: {breed.origin}</p>}
-                      <p className="text-sm text-gray-500">目的: {breed.purpose}</p>
-                      {breed.pros && <p className="text-sm text-gray-500">長所: {breed.pros}</p>}
-                      {breed.cons && <p className="text-sm text-gray-500">短所: {breed.cons}</p>}
-                      {breed.chip && <p className="text-sm text-gray-500 leading-relaxed">{breed.chip}</p>}
-                    </div>
-                  )
-                  return null
-                })()}
-                <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-line">{difficultyDescription}</p>
-              </div>
+              <p className="text-xs text-gray-400 text-center">
+                このスコアはミッションをこなすことで下がっていきます
+              </p>
 
               {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
@@ -516,7 +412,6 @@ export default function UchinokoNewPage() {
   )
 }
 
-// ===== 小コンポーネント =====
 const INPUT = 'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white text-gray-800 text-sm'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -527,27 +422,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   )
 }
-
-function Card({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-2xl p-4 border border-gray-100">
-      <p className="text-sm font-bold text-gray-700 mb-3">{label}</p>
-      {children}
-    </div>
-  )
-}
-
-function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-gray-600">{label}</span>
-      <button
-        onClick={() => onChange(!value)}
-        className={`w-12 h-6 rounded-full transition-colors ${value ? 'bg-orange-400' : 'bg-gray-300'}`}
-      >
-        <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${value ? 'translate-x-6' : 'translate-x-0'}`} />
-      </button>
-    </div>
-  )
-}
-

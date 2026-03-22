@@ -50,11 +50,6 @@ export default function Header() {
         <div className="hidden lg:flex items-center gap-2 shrink-0">
           {user ? (
             <>
-              {owner && (
-                <span className="text-xs text-orange-500 font-bold bg-orange-50 px-2 py-1 rounded-full">
-                  {owner.totalPoints}pt
-                </span>
-              )}
               <Link href="/notifications">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ring-2 ${pathname === '/notifications' ? 'ring-orange-500 bg-orange-50' : 'ring-transparent hover:bg-gray-100'}`}>
                   <Bell size={18} className={pathname === '/notifications' ? 'text-orange-500' : 'text-gray-500'} />

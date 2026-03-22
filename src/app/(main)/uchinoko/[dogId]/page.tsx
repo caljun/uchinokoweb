@@ -63,8 +63,8 @@ function UchinokoDetailContent() {
   }
 
   const handleInvite = async () => {
-    if (!owner?.friendId || !dog) return
-    const url = `${window.location.origin}/auth?ref=${owner.friendId}&for=${dogId}`
+    if (!dog) return
+    const url = `${window.location.origin}/auth`
     const title = `${dog.name}と一緒にウチの子やろう🐾`
     const text = `${dog.name}が待ってるよ🐾 一緒にウチの子はじめよう！`
 
@@ -226,7 +226,7 @@ function UchinokoDetailContent() {
                         <InfoCard title="犬のタイプ">
                           <p className="text-xs text-gray-400 mb-1">性格タイプ</p>
                           <p className="text-base font-semibold text-gray-800">{dog.temperamentType}</p>
-                          {TEMPERAMENT_DESCRIPTIONS[dog.temperamentType] && (
+                          {dog.temperamentType && TEMPERAMENT_DESCRIPTIONS[dog.temperamentType] && (
                             <p className="text-sm text-gray-500 mt-2 whitespace-pre-line">
                               {TEMPERAMENT_DESCRIPTIONS[dog.temperamentType]}
                             </p>
