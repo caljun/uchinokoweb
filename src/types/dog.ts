@@ -77,10 +77,28 @@ export interface Checkin {
 
 export interface MentorProgress {
   dogId: string
-  currentChapter: number          // 1-5
-  mentorTitle: string             // 称号
-  chaosReduced: number            // 累計削減量（称号判定用）
-  totalChaosHistory: { date: string; total: number }[]  // グラフ用
-  completedMissions: string[]     // missionId[]
+  currentChapter: number
+  mentorTitle: string
+  chaosReduced: number
+  totalChaosHistory: { date: string; total: number }[]
+  completedMissions: string[]
   updatedAt: Date
+}
+
+export interface Post {
+  id?: string
+  ownerId: string
+  dogId: string
+  dogName: string
+  dogBreed: string
+  dogBreedSize: number  // 0=小型, 1=中型, 2=大型
+  dogBirthDate: string  // ISO string
+  dogPhotoUrl?: string
+  ownerDisplayName?: string
+  imageUrl: string
+  caption?: string
+  location: { lat: number; lng: number }
+  postedAt: Date
+  notificationId?: string
+  isLate: boolean
 }

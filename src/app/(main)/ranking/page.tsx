@@ -1,8 +1,8 @@
 'use client'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-export default function RankingPage() {
+export default function RankingRedirect() {
   const router = useRouter()
-  useEffect(() => { router.replace('/mentor') }, [router])
+  useEffect(() => { router.replace('/home') }, [router])
   return null
 }
