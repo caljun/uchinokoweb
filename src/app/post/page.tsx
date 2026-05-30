@@ -8,7 +8,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import { db, storage } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Dog } from '@/types/dog'
-import { X, RotateCcw, Check, Loader2 } from 'lucide-react'
+import { ChevronDown, RefreshCw, RotateCcw, Check, Loader2 } from 'lucide-react'
 
 export default function PostPage() {
   const { user, owner } = useAuth()
@@ -23,6 +23,7 @@ export default function PostPage() {
   const [myDog, setMyDog] = useState<Dog | null>(null)
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [cameraError, setCameraError] = useState(false)
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
 
   useEffect(() => {
     if (!user) { router.replace('/home'); return }
@@ -39,11 +40,12 @@ export default function PostPage() {
     )
   }, [user, router])
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (mode: 'environment' | 'user' = 'environment') => {
     setCameraError(false)
+    streamRef.current?.getTracks().forEach(t => t.stop())
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', aspectRatio: 3 / 4 },
+        video: { facingMode: mode, aspectRatio: 3 / 4 },
         audio: false,
       })
       streamRef.current = stream
@@ -54,11 +56,15 @@ export default function PostPage() {
   }, [])
 
   useEffect(() => {
-    startCamera()
+    startCamera(facingMode)
     return () => { streamRef.current?.getTracks().forEach(t => t.stop()) }
-  }, [startCamera])
+  }, [startCamera, facingMode])
 
-  // 3:4にクロップして撮影
+  const flipCamera = () => {
+    const next = facingMode === 'environment' ? 'user' : 'environment'
+    setFacingMode(next)
+  }
+
   const capture = () => {
     const video = videoRef.current
     const canvas = canvasRef.current
@@ -67,28 +73,32 @@ export default function PostPage() {
     const vw = video.videoWidth
     const vh = video.videoHeight
     const targetAspect = 3 / 4
-
-    let srcX = 0, srcY = 0, srcW = vw, srcH = vh
     const videoAspect = vw / vh
 
+    let sx = 0, sy = 0, sw = vw, sh = vh
     if (videoAspect > targetAspect) {
-      srcW = vh * targetAspect
-      srcX = (vw - srcW) / 2
+      sw = vh * targetAspect
+      sx = (vw - sw) / 2
     } else {
-      srcH = vw / targetAspect
-      srcY = (vh - srcH) / 2
+      sh = vw / targetAspect
+      sy = (vh - sh) / 2
     }
 
     canvas.width = 900
     canvas.height = 1200
-    canvas.getContext('2d')?.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, 900, 1200)
+    const ctx = canvas.getContext('2d')
+    if (facingMode === 'user') {
+      ctx?.translate(900, 0)
+      ctx?.scale(-1, 1)
+    }
+    ctx?.drawImage(video, sx, sy, sw, sh, 0, 0, 900, 1200)
     setPhoto(canvas.toDataURL('image/jpeg', 0.85))
     streamRef.current?.getTracks().forEach(t => t.stop())
   }
 
   const retake = () => {
     setPhoto(null)
-    startCamera()
+    startCamera(facingMode)
   }
 
   const submit = async () => {
@@ -133,7 +143,6 @@ export default function PostPage() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = ev => {
-      // ファイルも3:4にクロップ
       const img = new window.Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
@@ -158,29 +167,39 @@ export default function PostPage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+    <div
+      className="fixed inset-0 bg-black flex flex-col"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       {/* ヘッダー */}
-      <div
-        className="flex items-center justify-between px-4 py-3 flex-shrink-0"
-        style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}
-      >
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
-          <X size={20} className="text-white" />
+      <div className="flex items-center px-4 py-3 flex-shrink-0">
+        <button
+          onClick={() => router.back()}
+          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center"
+        >
+          <ChevronDown size={22} className="text-white" />
         </button>
-        <p className="text-white font-bold text-sm">今日の一枚</p>
-        <div className="w-9" />
+        <p className="flex-1 text-center text-white font-black text-lg tracking-tight">
+          uchinoko<span className="text-orange-500">.</span>
+        </p>
+        <div className="w-10" />
       </div>
 
       {photo ? (
+        /* ── プレビュー ── */
         <>
-          {/* 3:4プレビュー */}
-          <div className="flex-1 flex items-center justify-center px-0 min-h-0">
-            <div className="w-full aspect-[3/4] relative max-h-full">
+          <div className="flex-1 flex items-center px-3 min-h-0">
+            <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-black">
               <Image src={photo} alt="preview" fill className="object-cover" />
+              {/* 犬プロフインセット */}
+              {myDog?.photoUrl && (
+                <div className="absolute top-3 left-3 w-24 aspect-[3/4] rounded-xl overflow-hidden border-2 border-white shadow-lg">
+                  <Image src={myDog.photoUrl} alt="" fill className="object-cover" sizes="96px" />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* コントロール */}
           <div className="flex-shrink-0 px-4 py-4 space-y-3">
             <input
               type="text"
@@ -209,50 +228,54 @@ export default function PostPage() {
             </div>
           </div>
         </>
-      ) : cameraError ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8">
-          <p className="text-white/60 text-center text-sm">
-            カメラにアクセスできませんでした。<br />ライブラリから選んでください。
-          </p>
-          <label className="px-8 py-3 bg-orange-500 text-white rounded-full font-bold text-sm cursor-pointer">
-            ライブラリから選ぶ
-            <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-          </label>
-        </div>
       ) : (
-        <>
-          {/* 3:4カメラプレビュー */}
-          <div className="flex-1 flex items-center justify-center min-h-0">
-            <div className="w-full aspect-[3/4] relative overflow-hidden max-h-full bg-black">
+        /* ── カメラ ── */
+        <div className="flex-1 flex flex-col justify-center px-3 pb-6">
+          {/* ビューファインダー 3:4 */}
+          <div className="relative w-full aspect-[3/4] rounded-3xl overflow-hidden bg-gray-900">
+            {cameraError ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                <p className="text-white/50 text-sm text-center px-8">カメラにアクセスできませんでした</p>
+                <label className="px-6 py-2.5 bg-white/10 text-white rounded-full text-sm font-medium cursor-pointer">
+                  ライブラリから選ぶ
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                </label>
+              </div>
+            ) : (
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
                 className="absolute inset-0 w-full h-full object-cover"
+                style={facingMode === 'user' ? { transform: 'scaleX(-1)' } : {}}
               />
-            </div>
+            )}
+
+            {/* カメラ切り替え */}
+            {!cameraError && (
+              <button
+                onClick={flipCamera}
+                className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+              >
+                <RefreshCw size={18} className="text-white" />
+              </button>
+            )}
           </div>
+
           <canvas ref={canvasRef} className="hidden" />
 
           {/* シャッター */}
-          <div className="flex-shrink-0 py-8 flex items-center justify-center gap-10">
-            <label className="flex flex-col items-center gap-1 cursor-pointer">
-              <div className="w-10 h-10 rounded-full border border-white/20 bg-white/10 flex items-center justify-center">
-                <span className="text-base">🖼️</span>
-              </div>
-              <span className="text-white/40 text-[10px]">ライブラリ</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-            </label>
+          <div className="flex items-center justify-center mt-6">
             <button
               onClick={capture}
-              className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center active:scale-95 transition-transform"
+              disabled={cameraError}
+              className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30"
             >
-              <div className="w-16 h-16 bg-white rounded-full" />
+              <div className="w-[60px] h-[60px] bg-white rounded-full" />
             </button>
-            <div className="w-10" />
           </div>
-        </>
+        </div>
       )}
     </div>
   )

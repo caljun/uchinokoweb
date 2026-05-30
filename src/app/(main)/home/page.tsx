@@ -65,25 +65,25 @@ function PostCard({ post, locked, onUnlock }: { post: Post; locked: boolean; onU
       {/* 投稿者ヘッダー */}
       <div className="flex items-center gap-2.5 mb-2.5 px-1">
         {post.dogPhotoUrl ? (
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
             <Image src={post.dogPhotoUrl} alt="" width={32} height={32} className="object-cover w-full h-full" />
           </div>
         ) : (
-          <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
-            <PawPrint size={14} className="text-white/60" />
+          <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
+            <PawPrint size={14} className="text-gray-400" />
           </div>
         )}
         <div>
-          <p className="text-white font-bold text-sm leading-tight">{post.dogName}</p>
-          <p className="text-white/50 text-xs">{timeAgo(post.postedAt)}</p>
+          <p className="text-gray-900 font-bold text-sm leading-tight">{post.dogName}</p>
+          <p className="text-gray-500 text-xs">{timeAgo(post.postedAt)}</p>
         </div>
         {post.isLate && (
-          <span className="ml-auto text-[10px] text-white/40 bg-white/10 px-2 py-0.5 rounded-full">遅れ</span>
+          <span className="ml-auto text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">遅れ</span>
         )}
       </div>
 
       {/* 画像 */}
-      <div className="rounded-2xl overflow-hidden aspect-[3/4] relative">
+      <div className="rounded-2xl overflow-hidden aspect-[3/4] relative bg-gray-100">
         <Image
           src={post.imageUrl}
           alt={post.dogName}
@@ -92,7 +92,7 @@ function PostCard({ post, locked, onUnlock }: { post: Post; locked: boolean; onU
           sizes="100vw"
         />
 
-        {/* 犬プロフ小インセット（BeRealのフロントカメラ位置） */}
+        {/* 犬プロフ小インセット */}
         {!locked && post.dogPhotoUrl && (
           <div className="absolute top-3 left-3 w-24 aspect-[3/4] rounded-xl overflow-hidden border-2 border-white shadow-lg">
             <Image src={post.dogPhotoUrl} alt="" fill className="object-cover" sizes="96px" />
@@ -101,12 +101,12 @@ function PostCard({ post, locked, onUnlock }: { post: Post; locked: boolean; onU
 
         {/* ロックオーバーレイ */}
         {locked && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <Lock size={26} className="text-white" />
-            <p className="text-white text-sm font-bold">投稿すると見られます</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/10">
+            <Lock size={26} className="text-white drop-shadow" />
+            <p className="text-white text-sm font-bold drop-shadow">投稿すると見られます</p>
             <button
               onClick={onUnlock}
-              className="px-6 py-2 bg-orange-500 text-white rounded-full font-bold text-sm"
+              className="px-6 py-2 bg-orange-500 text-white rounded-full font-bold text-sm shadow"
             >
               撮影する
             </button>
@@ -117,16 +117,16 @@ function PostCard({ post, locked, onUnlock }: { post: Post; locked: boolean; onU
       {/* キャプション */}
       <div className="flex items-center gap-2.5 mt-2.5 px-1">
         {post.dogPhotoUrl ? (
-          <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+          <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border border-gray-200">
             <Image src={post.dogPhotoUrl} alt="" width={24} height={24} className="object-cover w-full h-full" />
           </div>
         ) : (
-          <div className="w-6 h-6 rounded-full bg-white/10 flex-shrink-0" />
+          <div className="w-6 h-6 rounded-full bg-gray-100 flex-shrink-0" />
         )}
         {post.caption ? (
-          <p className="text-white/80 text-sm">{post.caption}</p>
+          <p className="text-gray-800 text-sm">{post.caption}</p>
         ) : (
-          <p className="text-white/30 text-sm">コメントを追加...</p>
+          <p className="text-gray-400 text-sm">コメントを追加...</p>
         )}
       </div>
     </div>
@@ -194,7 +194,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -202,9 +202,9 @@ export default function HomePage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-8 gap-5">
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center px-8 gap-5">
         <PawPrint size={48} className="text-orange-500" strokeWidth={1.5} />
-        <p className="text-white/70 text-center text-sm">ログインして今日のうちの子を見よう</p>
+        <p className="text-gray-500 text-center text-sm">ログインして今日のうちの子を見よう</p>
         <button
           type="button"
           onClick={openAuthModal}
@@ -219,7 +219,7 @@ export default function HomePage() {
   const displayPosts = scoredPosts.length > 0 ? scoredPosts.map(s => s.post) : DUMMY_POSTS
 
   return (
-    <div className="min-h-screen bg-black pb-20">
+    <div className="min-h-screen bg-gray-100 pb-20">
       {displayPosts.map((post) => (
         <PostCard
           key={post.id}
